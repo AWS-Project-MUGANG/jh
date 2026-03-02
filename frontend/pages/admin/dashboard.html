@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>무강대학교 관리자(강사) 시스템</title>
+    <link rel="stylesheet" href="../../css/main.css">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        /* 강사용 페이지 식별을 위한 헤더 테마 무거운 색상 적용 */
+        .sidebar-header {
+            background-color: #37474f;
+        }
+
+        .logo-area h1 {
+            color: #37474f;
+        }
+
+        .admin-stat-card {
+            background: white;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 20px;
+            flex: 1;
+            text-align: center;
+        }
+
+        .stat-grid {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .stat-number {
+            font-size: 2rem;
+            font-weight: bold;
+            color: var(--primary-color);
+            margin-top: 10px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="app-container">
+        <!-- 사이드바 -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <div class="student-info">
+                    <span class="name">김무강 교수</span>
+                    <span class="id">Admin-0012</span>
+                </div>
+                <div class="department-info">
+                    <p>사회과학대학</p>
+                    <p class="sub-dept">아동가족복지학과 (강의 전담)</p>
+                </div>
+            </div>
+
+            <nav class="sidebar-nav">
+                <button class="nav-item active">강좌 수강생 관리</button>
+                <button class="nav-item" onclick="location.href='approvals.html'">결재 / 서류 반려함</button>
+                <button class="nav-item">학사 규정 AI 업데이트</button>
+                <button class="nav-item logout-btn" onclick="location.href='../auth/login.html'">로그아웃</button>
+            </nav>
+        </aside>
+
+        <!-- 메인 콘텐츠 영역 -->
+        <main class="main-content">
+            <header class="top-header">
+                <div class="logo-area">
+                    <h1>무강대학교 - 관리자 센터</h1>
+                    <span class="logo-sub">Instructor / Admin Portal</span>
+                </div>
+            </header>
+
+            <div class="content-area">
+                <h2>강의 종합 현황</h2>
+                <div class="stat-grid">
+                    <div class="admin-stat-card">
+                        <p>내 강의 수강 대기생</p>
+                        <div class="stat-number">142 명</div>
+                    </div>
+                    <div class="admin-stat-card">
+                        <p>승인 가능한 휴복학 처리건</p>
+                        <div class="stat-number">7 건</div>
+                    </div>
+                    <div class="admin-stat-card">
+                        <p>시스템 접수된 무강 AI 질문량</p>
+                        <div class="stat-number">1,204 건</div>
+                    </div>
+                </div>
+
+                <!-- 강사/관리자 전용 데이터 테이블 (추가 구축 예정 영역) -->
+                <section class="list-section">
+                    <h2>내 강좌 수강생 명단 (인간행동과 사회환경)</h2>
+                    <div class="table-wrapper">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>소속 대학</th>
+                                    <th>학과</th>
+                                    <th>학번</th>
+                                    <th>이름</th>
+                                    <th>상태</th>
+                                    <th>관리</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>사회과학대학</td>
+                                    <td>가정복지학과</td>
+                                    <td>22517717</td>
+                                    <td>임정현</td>
+                                    <td><span style="color:green">신청완료</span></td>
+                                    <td><button class="btn-apply" style="background-color:gray">취소 반려</button></td>
+                                </tr>
+                                <tr>
+                                    <td>상경대학</td>
+                                    <td>경영학과</td>
+                                    <td>20210001</td>
+                                    <td>김철수</td>
+                                    <td><span style="color:orange">대기(초과)</span></td>
+                                    <td><button class="btn-apply">강제 승인</button></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+            </div>
+        </main>
+    </div>
+</body>
+
+</html>

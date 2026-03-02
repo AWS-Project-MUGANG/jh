@@ -1,0 +1,7 @@
+{
+  "dependencies": {
+    "psycopg2-binary": "^0.0.1",
+    "python-dotenv": "^0.0.1-security",
+    "sqlalchemy": "^10.1.1"
+  }
+}

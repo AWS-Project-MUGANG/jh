@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI 학사 비서 채팅</title>
+    <link rel="stylesheet" href="../../css/main.css">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        .chat-container {
+            display: flex;
+            flex-direction: column;
+            height: 600px;
+            background: white;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .chat-history {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            background-color: #f8f9fa;
+        }
+
+        .message {
+            margin-bottom: 15px;
+            max-width: 70%;
+            padding: 12px 16px;
+            border-radius: 8px;
+            line-height: 1.4;
+        }
+
+        .msg-ai {
+            background-color: var(--primary-color);
+            color: white;
+            align-self: flex-start;
+            border-bottom-left-radius: 0;
+        }
+
+        .msg-user {
+            background-color: #e3f2fd;
+            color: var(--text-main);
+            align-self: flex-end;
+            margin-left: auto;
+            border-bottom-right-radius: 0;
+        }
+
+        .chat-input-area {
+            display: flex;
+            padding: 15px;
+            border-top: 1px solid var(--border-color);
+            background: white;
+        }
+
+        .chat-input-area input {
+            flex: 1;
+            padding: 12px;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            font-size: 1rem;
+        }
+
+        .btn-send {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 0 20px;
+            margin-left: 10px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="app-container">
+        <!-- 사이드바 -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <div class="student-info"><span class="name">임정현</span></div>
+            </div>
+            <nav class="sidebar-nav">
+                <button class="nav-item" onclick="location.href='dashboard.html'">뒤로 가기 (대시보드)</button>
+            </nav>
+        </aside>
+
+        <main class="main-content">
+            <header class="top-header">
+                <div class="logo-area">
+                    <h2>AI 학사행정 비서 (RAG)</h2>
+                </div>
+            </header>
+            <div class="content-area">
+                <div class="chat-container">
+                    <div class="chat-history">
+                        <div class="message msg-ai">안녕하세요! 무강대학교 AI 학사 비서입니다.<br>수강신청 규정이나 장학금 서류 등 궁금하신 점을 물어보세요! (예:
+                            "복수전공 조건이 뭐야?")</div>
+                    </div>
+                    <div class="chat-input-area">
+                        <input type="text" placeholder="질문을 입력하세요...">
+                        <button class="btn-send">전송</button>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+</body>
+
+</html>

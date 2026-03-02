@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>무강대학교 AI 학사행정 서비스</title>
+    <link rel="stylesheet" href="../../css/main.css">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
+</head>
+
+<body>
+    <div class="app-container">
+        <!-- 사이드바 영역 -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <div class="student-info">
+                    <span class="name">임정현</span>
+                    <span class="id">22517717</span>
+                </div>
+                <div class="department-info">
+                    <p>사회과학대학</p>
+                    <p class="sub-dept">가정복지학과 <span class="year">2학년</span></p>
+                </div>
+            </div>
+
+            <nav class="sidebar-nav">
+                <button class="nav-item active" id="tab-sugang" onclick="switchTab('sugang')">수강 신청</button>
+                <button class="nav-item" id="tab-timetable" onclick="switchTab('timetable')">시간표</button>
+                <button class="nav-item" onclick="location.href='chat.html'">AI 학사 비서 (RAG)</button>
+                <button class="nav-item logout-btn" onclick="location.href='../auth/login.html'">로그아웃</button>
+            </nav>
+        </aside>
+
+        <!-- 메인 콘텐츠 영역 -->
+        <main class="main-content">
+            <header class="top-header">
+                <div class="logo-area">
+                    <h1>무강대학교</h1>
+                    <span class="logo-sub">Mugang University</span>
+                </div>
+            </header>
+
+            <div class="content-area">
+
+                <!-- 수강신청 탭 패널 -->
+                <div id="panel-sugang" class="panel active">
+                    <!-- 필터 영역 -->
+                    <div class="filter-bar">
+                        <select>
+                            <option>사회과학대학</option>
+                        </select>
+                        <select>
+                            <option>사회복지학부</option>
+                        </select>
+                        <select>
+                            <option>아동가족복지학과</option>
+                        </select>
+                        <select>
+                            <option>2</option>
+                        </select>
+                    </div>
+
+                    <!-- 장바구니 내역 -->
+                    <section class="cart-section">
+                        <h2>장바구니 내역</h2>
+                        <div class="table-wrapper">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>건물명</th>
+                                        <th>개설학과</th>
+                                        <th>과목명</th>
+                                        <th>분류</th>
+                                        <th>강의실</th>
+                                        <th>수강학년</th>
+                                        <th>신청인원</th>
+                                        <th>수강신청</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="cart-tbody">
+                                    <!-- JS에서 동적으로 채워짐 -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </section>
+
+                    <!-- 수강신청 목록 -->
+                    <section class="list-section">
+                        <h2>수강신청 (전체 강의)</h2>
+                        <div class="table-wrapper">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>건물명</th>
+                                        <th>개설학과</th>
+                                        <th>과목명</th>
+                                        <th>분류</th>
+                                        <th>강의실</th>
+                                        <th>학점</th>
+                                        <th>정원</th>
+                                        <th>장바구니 담기</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="sugang-tbody">
+                                    <!-- JS에서 동적으로 채워짐 -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </section>
+                </div>
+
+                <!-- 시간표 탭 패널 -->
+                <div id="panel-timetable" class="panel" style="display: none;">
+                    <div class="timetable-wrapper">
+                        <table class="schedule-table">
+                            <thead>
+                                <tr>
+                                    <th></th>
+                                    <th>월</th>
+                                    <th>화</th>
+                                    <th>수</th>
+                                    <th>목</th>
+                                    <th>금</th>
+                                    <th>토</th>
+                                </tr>
+                            </thead>
+                            <tbody id="timetable-tbody">
+                                <tr>
+                                    <td class="time-cell">09:00<br>-<br>09:50</td>
+                                    <td></td>
+                                    <td></td>
+                                    <td></td>
+                                    <td></td>
+                                    <td></td>
+                                    <td></td>
+                                </tr>
+                                <tr>
+                                    <td class="time-cell">10:00<br>-<br>10:50</td>
+                                    <td></td>
+                                    <td></td>
+                                    <td></td>
+                                    <td></td>
+                                    <td></td>
+                                    <td></td>
+                                </tr>
+                                <tr>
+                                    <td class="time-cell">11:00<br>-<br>11:50</td>
+                                    <td></td>
+                                    <td></td>
+                                    <td></td>
+                                    <td></td>
+                                    <td></td>
+                                    <td></td>
+                                </tr>
+                                <tr>
+                                    <td class="time-cell">12:00<br>-<br>12:50</td>
+                                    <td></td>
+                                    <td></td>
+                                    <td></td>
+                                    <td></td>
+                                    <td></td>
+                                    <td></td>
+                                </tr>
+                                <tr>
+                                    <td class="time-cell">13:00<br>-<br>13:50</td>
+                                    <td></td>
+                                    <td></td>
+                                    <td></td>
+                                    <td></td>
+                                    <td></td>
+                                    <td></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+            </div>
+        </main>
+    </div>
+
+    <!-- 스크립트 연결 -->
+    <script src="../../js/app.js"></script>
+</body>
+
+</html>

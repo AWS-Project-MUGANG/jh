@@ -1,0 +1,262 @@
+/* 웹 폰트 임포트 */
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap');
+
+:root {
+    --primary-color: #1a237e;
+    /* 네이비 블루 계열 */
+    --sidebar-bg: #f8f9fa;
+    --sidebar-text: #333;
+    --sidebar-active-bg: #e3f2fd;
+    --sidebar-active-text: #1976d2;
+    --bg-color: #ffffff;
+    --text-main: #212529;
+    --border-color: #dee2e6;
+    --table-bg: #f8f9fa;
+    --hover-bg: #e9ecef;
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    font-family: 'Noto Sans KR', sans-serif;
+}
+
+body {
+    background-color: var(--bg-color);
+    color: var(--text-main);
+    height: 100vh;
+    margin: 0;
+    overflow: hidden;
+}
+
+.app-container {
+    display: flex;
+    height: 100%;
+    width: 100vw;
+}
+
+/* 사이드바 */
+.sidebar {
+    width: 250px;
+    background-color: var(--sidebar-bg);
+    border-right: 1px solid var(--border-color);
+    display: flex;
+    flex-direction: column;
+}
+
+.sidebar-header {
+    background-color: var(--primary-color);
+    color: white;
+    padding: 20px;
+}
+
+.student-info {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 10px;
+}
+
+.student-info .name {
+    font-size: 1.2rem;
+    font-weight: 700;
+}
+
+.student-info .id {
+    font-size: 0.9rem;
+    opacity: 0.8;
+}
+
+.department-info {
+    font-size: 0.9rem;
+    line-height: 1.4;
+}
+
+.sub-dept {
+    color: #bbdefb;
+}
+
+.sub-dept .year {
+    float: right;
+}
+
+.sidebar-nav {
+    display: flex;
+    flex-direction: column;
+    padding: 10px 0;
+}
+
+.nav-item {
+    padding: 15px 20px;
+    border: none;
+    background: none;
+    text-align: left;
+    font-size: 1rem;
+    color: var(--sidebar-text);
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.nav-item:hover {
+    background-color: var(--hover-bg);
+}
+
+.nav-item.active {
+    background-color: var(--sidebar-active-bg);
+    color: var(--sidebar-active-text);
+    font-weight: 500;
+    border-left: 4px solid var(--sidebar-active-text);
+}
+
+.logout-btn {
+    color: #d32f2f;
+    margin-top: auto;
+}
+
+/* 메인 콘텐츠 */
+.main-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.top-header {
+    padding: 15px 30px;
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    align-items: center;
+}
+
+.logo-area h1 {
+    font-size: 1.5rem;
+    color: var(--primary-color);
+    margin: 0;
+    display: inline-block;
+}
+
+.logo-sub {
+    font-size: 0.8rem;
+    color: #6c757d;
+    margin-left: 10px;
+}
+
+.content-area {
+    flex: 1;
+    padding: 20px 30px;
+    overflow-y: auto;
+    background-color: #fcfcfc;
+}
+
+.filter-bar {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+}
+
+.filter-bar select {
+    padding: 8px 12px;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    background-color: white;
+    min-width: 150px;
+}
+
+.cart-section,
+.list-section {
+    margin-bottom: 30px;
+    background: white;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.cart-section h2,
+.list-section h2 {
+    font-size: 1.1rem;
+    padding: 15px 20px;
+    background-color: var(--table-bg);
+    border-bottom: 1px solid var(--border-color);
+    margin: 0;
+    color: var(--primary-color);
+}
+
+.table-wrapper {
+    overflow-x: auto;
+}
+
+.data-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.data-table th,
+.data-table td {
+    padding: 12px 15px;
+    text-align: center;
+    border-bottom: 1px solid var(--border-color);
+    font-size: 0.95rem;
+}
+
+.data-table th {
+    background-color: #fff;
+    font-weight: 500;
+    color: #555;
+    white-space: nowrap;
+}
+
+.data-table tbody tr:hover {
+    background-color: var(--hover-bg);
+}
+
+.btn-apply {
+    background-color: var(--primary-color);
+    color: white;
+    border: none;
+    padding: 6px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: background-color 0.2s;
+}
+
+.btn-apply:hover {
+    background-color: #121858;
+}
+
+.timetable-wrapper {
+    background: white;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.schedule-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.schedule-table th,
+.schedule-table td {
+    border: 1px solid var(--border-color);
+    padding: 10px;
+    text-align: center;
+}
+
+.schedule-table th {
+    background-color: var(--table-bg);
+    font-weight: 500;
+}
+
+.time-cell {
+    background-color: var(--table-bg);
+    width: 80px;
+    color: #555;
+    font-size: 0.9rem;
+    line-height: 1.2;
+}
+
+.schedule-table td {
+    height: 60px;
+}
