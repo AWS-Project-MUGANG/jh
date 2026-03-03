@@ -12,7 +12,7 @@ resource "aws_vpc" "mugang-vpc" {
 
 # Public Subnet (Bastion용)
 resource "aws_subnet" "public_sub" {
-  vpc_id                  = aws_vpc.mugang_vpc.id
+  vpc_id                  = aws_vpc.mugang-vpc.id
   cidr_block              = "10.0.1.0/24"
   map_public_ip_on_launch = true
   availability_zone       = "ap-northeast-2a"
@@ -20,24 +20,24 @@ resource "aws_subnet" "public_sub" {
 
 # Private Subnet (RDS용 - 최소 2개 필요)
 resource "aws_subnet" "private_sub_1" {
-  vpc_id            = aws_vpc.mugang_vpc.id
+  vpc_id            = aws_vpc.mugang-vpc.id
   cidr_block        = "10.0.2.0/24"
   availability_zone = "ap-northeast-2a"
 }
 
 resource "aws_subnet" "private_sub_2" {
-  vpc_id            = aws_vpc.mugang_vpc.id
+  vpc_id            = aws_vpc.mugang-vpc.id
   cidr_block        = "10.0.3.0/24"
   availability_zone = "ap-northeast-2c"
 }
 
 # 인터넷 게이트웨이 (Bastion 접속용)
 resource "aws_internet_gateway" "igw" {
-  vpc_id = igw-0768249ab281c7f57
+  vpc_id = aws_vpc.mugang-vpc.id
 }
 
 resource "aws_route_table" "public_rt" {
-  vpc_id = vpc-0f6a95366fcad11a6
+  vpc_id = aws_vpc.mugang-vpc.id
   route {
     cidr_block = "0.0.0.0/0"
     gateway_id = aws_internet_gateway.igw.id
@@ -53,7 +53,7 @@ resource "aws_route_table_association" "public_assoc" {
 # Bastion SG: 내 IP에서만 SSH(22) 허용
 resource "aws_security_group" "bastion_sg" {
   name   = "bastion-sg"
-  vpc_id = aws_vpc.mugang_vpc.id
+  vpc_id = aws_vpc.mugang-vpc.id
 
   ingress {
     from_port   = 22
@@ -73,7 +73,7 @@ resource "aws_security_group" "bastion_sg" {
 # RDS SG: Bastion SG로부터만 5432 허용 (실무 권장 방식)
 resource "aws_security_group" "rds_sg" {
   name   = "rds-sg"
-  vpc_id = aws_vpc.mugang_vpc.id
+  vpc_id = aws_vpc.mugang-vpc.id
 
   ingress {
     from_port       = 5432
