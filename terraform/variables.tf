@@ -8,3 +8,9 @@ variable "key_name" {
   description = "EC2 접속에 사용할 키 페어 이름"
   type        = string
 }
+
+variable "cluster_name" {
+  description = "EKS 클러스터 이름"
+  type        = string
+  default     = "mugang-eks"
+}
