@@ -4,7 +4,7 @@ provider "aws" {
 }
 
 # 2. VPC 및 네트워크 설정 (기본 VPC 사용 가능하나 실무형으로 분리)
-resource "aws_vpc" "mugang-vpc" {
+resource "aws_vpc" "mugang_vpc" {
   cidr_block           = "10.0.0.0/16"
   enable_dns_hostnames = true
   tags = { Name = "mugang-vpc" }
@@ -33,11 +33,11 @@ resource "aws_subnet" "private_sub_2" {
 
 # 인터넷 게이트웨이 (Bastion 접속용)
 resource "aws_internet_gateway" "igw" {
-  vpc_id = igw-0768249ab281c7f57
+  vpc_id = aws_vpc.mugang_vpc.id
 }
 
 resource "aws_route_table" "public_rt" {
-  vpc_id = vpc-0f6a95366fcad11a6
+  vpc_id = aws_vpc.mugang_vpc.id
   route {
     cidr_block = "0.0.0.0/0"
     gateway_id = aws_internet_gateway.igw.id
@@ -50,6 +50,11 @@ resource "aws_route_table_association" "public_assoc" {
 }
 
 # 3. 보안 그룹 (Security Groups)
+# 현재 Terraform을 실행하는 PC의 공인 IP를 동적으로 조회
+data "http" "my_ip" {
+  url = "http://ifconfig.me/ip"
+}
+
 # Bastion SG: 내 IP에서만 SSH(22) 허용
 resource "aws_security_group" "bastion_sg" {
   name   = "bastion-sg"
@@ -59,7 +64,7 @@ resource "aws_security_group" "bastion_sg" {
     from_port   = 22
     to_port     = 22
     protocol    = "tcp"
-    cidr_blocks = ["YOUR_PUBLIC_IP/32"] # 본인 IP로 수정 필수
+    cidr_blocks = ["${chomp(data.http.my_ip.response_body)}/32"] # 현재 내 IP를 동적으로 설정
   }
 
   egress {
@@ -83,13 +88,24 @@ resource "aws_security_group" "rds_sg" {
   }
 }
 
+# 최신 Amazon Linux 2023 AMI 자동 조회 (하드코딩 방지)
+data "aws_ami" "amazon_linux_2023" {
+  most_recent = true
+  owners      = ["amazon"]
+
+  filter {
+    name   = "name"
+    values = ["al2023-ami-2023.*-x86_64"]
+  }
+}
+
 # 4. Bastion Host (EC2) 생성
 resource "aws_instance" "bastion" {
-  ami                    = "ami-0c2d3e23e757b5d84" # Amazon Linux 2023 최신 AMI (서울 기준)
+  ami                    = data.aws_ami.amazon_linux_2023.id
   instance_type          = "t3.micro"              # 프리티어
   subnet_id              = aws_subnet.public_sub.id
   vpc_security_group_ids = [aws_security_group.bastion_sg.id]
-  key_name               = "your-key-pair-name"    # 이미 생성한 키페어 이름 입력
+  key_name               = var.key_name
 
   tags = { Name = "mugang-bastion" }
 }
@@ -103,13 +119,13 @@ resource "aws_db_subnet_group" "rds_sub_group" {
 resource "aws_db_instance" "postgres_db" {
   allocated_storage      = 20
   engine                 = "postgres"
-  engine_version         = "16.1"
+  engine_version         = "15.10"                  # AWS에서 지원하는 안정적인 버전으로 변경
   instance_class         = "db.t3.micro"           # 프리티어
   db_name                = "mugang"
-  username               = "postgres"
-  password               = "anrkd615!" # 실제 사용 시 변수 처리 권장
+  username               = "mugangadmin"
+  password               = var.db_password
   skip_final_snapshot    = true
-  publicly_accessible    = false                   # 실무 권장 (Private)
+  publicly_accessible    = false                   # 실무 권장 (Private), 보안강화
   db_subnet_group_name   = aws_db_subnet_group.rds_sub_group.name
   vpc_security_group_ids = [aws_security_group.rds_sg.id]
 
@@ -121,6 +137,12 @@ output "bastion_public_ip" {
   value = aws_instance.bastion.public_ip
 }
 
-output "rds_endpoint" {
-  value = aws_db_instance.postgres_db.endpoint
+output "rds_address" {
+  description = "DBeaver Host란에 입력할 주소"
+  value       = aws_db_instance.postgres_db.address
+}
+
+output "rds_port" {
+  description = "DBeaver Port란에 입력할 포트"
+  value       = aws_db_instance.postgres_db.port
 }
