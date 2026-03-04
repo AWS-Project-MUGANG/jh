@@ -1,10 +1,10 @@
-from sqlalchemy import Column, String, Integer, DateTime, ForeignKey, JSON
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy import Column, String, Integer, DateTime, ForeignKey, JSON, Time, Enum as SAEnum
 from sqlalchemy.orm import relationship
 from datetime import datetime
 import uuid
 
 from database import Base
+
 
 class User(Base):
     __tablename__ = "users"
@@ -19,6 +19,7 @@ class User(Base):
     status = Column(String(20), default="enrolled")
     created_at = Column(DateTime, default=datetime.utcnow)
 
+
 class ChatSession(Base):
     __tablename__ = "chat_sessions"
 
@@ -30,26 +31,51 @@ class ChatSession(Base):
 
     messages = relationship("ChatMessage", backref="session")
 
+
 class ChatMessage(Base):
     __tablename__ = "chat_messages"
 
     id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
     session_id = Column(String, ForeignKey("chat_sessions.id"))
-    role = Column(String(10), nullable=False) # 'user' or 'assistant'
+    role = Column(String(10), nullable=False)  # 'user' or 'assistant'
     content = Column(String, nullable=False)
     tokens_used = Column(Integer)
     created_at = Column(DateTime, default=datetime.utcnow)
 
-class Schedule(Base):
-    __tablename__ = "schedules"
 
-    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
-    user_id = Column(String, ForeignKey("users.id"), nullable=True)
-    title = Column(String(255), nullable=False)
-    description = Column(String)
-    start_date = Column(DateTime, nullable=False)
-    end_date = Column(DateTime, nullable=False)
-    schedule_type = Column(String(50))
+class Lecture(Base):
+    __tablename__ = "lecture_tb"
+
+    lecture_id = Column(Integer, primary_key=True, autoincrement=True)
+    course_no = Column(String(20), unique=True)
+    subject = Column(String(200), nullable=False)
+    department = Column(String(100))
+    lec_grade = Column(String(10))
+    credit = Column(Integer)
+    professor = Column(String(50))
+    classroom = Column(String(100))
+    type = Column(SAEnum('전공필수', '전공선택', '교양필수', '교양선택', name='lecture_category'))
+    capacity = Column(Integer, default=0)
+    count = Column(Integer, default=0)
+    version = Column(Integer, default=0)
+
+    schedules = relationship("ScheduleTb", back_populates="lecture", cascade="all, delete-orphan")
+    enrollments = relationship("Enrollment", back_populates="lecture")
+
+
+class ScheduleTb(Base):
+    __tablename__ = "schedule_tb"
+
+    sche_no = Column(Integer, primary_key=True, autoincrement=True)
+    lecture_id = Column(Integer, ForeignKey("lecture_tb.lecture_id", ondelete="CASCADE"))
+    day_of_week = Column(String(1))
+    start_min = Column(Integer)
+    end_min = Column(Integer)
+    start_time = Column(Time)
+    end_time = Column(Time)
+
+    lecture = relationship("Lecture", back_populates="schedules")
+
 
 class Form(Base):
     __tablename__ = "forms"
@@ -61,6 +87,7 @@ class Form(Base):
     status = Column(String(20), default="draft")
     created_at = Column(DateTime, default=datetime.utcnow)
 
+
 class DocumentMetadata(Base):
     __tablename__ = "document_metadata"
 
@@ -70,21 +97,19 @@ class DocumentMetadata(Base):
     source_url = Column(String(500))
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
+
 class Enrollment(Base):
     __tablename__ = "enrollments"
 
     id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
     user_id = Column(String, ForeignKey("users.id"))
-    subject = Column(String(255), nullable=False)
-    college = Column(String(100))
-    department = Column(String(100))
-    room = Column(String(100))
+    lecture_id = Column(Integer, ForeignKey("lecture_tb.lecture_id"))
     status = Column(String(20), default="cart")
-    credits = Column(Integer, default=3)
     created_at = Column(DateTime, default=datetime.utcnow)
 
-    # 성적과의 관계
+    lecture = relationship("Lecture", back_populates="enrollments")
     grade = relationship("Grade", back_populates="enrollment", uselist=False)
+
 
 class Grade(Base):
     __tablename__ = "grades"
@@ -92,11 +117,12 @@ class Grade(Base):
     id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
     enrollment_id = Column(String, ForeignKey("enrollments.id"), unique=True)
     user_id = Column(String, ForeignKey("users.id"))
-    score = Column(Integer) # 0-100
-    grade_letter = Column(String(5)) # A+, B0, etc.
+    score = Column(Integer)  # 0-100
+    grade_letter = Column(String(5))  # A+, B0, etc.
     created_at = Column(DateTime, default=datetime.utcnow)
 
     enrollment = relationship("Enrollment", back_populates="grade")
+
 
 class Notice(Base):
     __tablename__ = "notices"
@@ -104,12 +130,12 @@ class Notice(Base):
     id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
     title = Column(String(255), nullable=False)
     content = Column(String, nullable=False)
-    author_id = Column(String, ForeignKey("users.id")) # 관리자 ID
+    author_id = Column(String, ForeignKey("users.id"))
     created_at = Column(DateTime, default=datetime.utcnow)
+
 
 class SystemConfig(Base):
     __tablename__ = "system_configs"
 
     key = Column(String(100), primary_key=True)
     value = Column(String(255), nullable=False)
-

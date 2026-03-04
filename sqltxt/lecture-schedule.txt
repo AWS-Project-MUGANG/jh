@@ -1,0 +1,32 @@
+-- 1. ENUM 타입 정의 (먼저 실행)
+CREATE TYPE lecture_category AS ENUM ('전공필수', '전공선택', '교양필수', '교양선택');
+
+-- 2. 강의 테이블 생성
+CREATE TABLE lecture_tb (
+    lecture_id SERIAL PRIMARY KEY,
+    course_no VARCHAR(20) UNIQUE,   -- 수강번호 (고유키)
+    subject VARCHAR(200) NOT NULL,
+    department VARCHAR(100),
+    lec_grade VARCHAR(10),
+    credit INT,
+    professor VARCHAR(50),
+    classroom VARCHAR(100),
+    type lecture_category,          -- 위에서 만든 타입을 지정
+    capacity INTEGER DEFAULT 0,     -- 수강 제한 인원
+    count INTEGER DEFAULT 0,        -- 현재 신청 인원
+    version INTEGER DEFAULT 0       -- 낙관적 락을 위한 버전
+);
+
+-- 3. 시간표 테이블 생성 (기존 로직 유지)
+CREATE TABLE schedule_tb (
+    sche_no SERIAL PRIMARY KEY,
+    lecture_id INT REFERENCES lecture_tb(lecture_id) ON DELETE CASCADE,
+    day_of_week CHAR(1),       
+    start_min INT,             
+    end_min INT,               
+    start_time TIME,           
+    end_time TIME              
+);
+
+-- 인덱스 생성
+CREATE INDEX idx_sche_time ON schedule_tb (day_of_week, start_min, end_min);

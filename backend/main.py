@@ -6,7 +6,7 @@ from typing import List, Optional
 from sqlalchemy.orm import Session
 from passlib.context import CryptContext
 from jose import jwt
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 # DB 연동
 from database import engine, get_db, Base
@@ -27,7 +27,7 @@ def get_password_hash(password):
 
 def create_access_token(data: dict):
     to_encode = data.copy()
-    expire = datetime.utcnow() + timedelta(minutes=60)
+    expire = datetime.now(timezone.utc) + timedelta(minutes=60)
     to_encode.update({"exp": expire})
     return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
 
@@ -35,7 +35,7 @@ def create_access_token(data: dict):
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# 임시로 시작 시 DB 테이블 모두 자동 생성 (개발용)
+# 시작 시 DB 테이블 자동 생성 (개발용)
 models.Base.metadata.create_all(bind=engine)
 
 # FastAPI 앱 생성
@@ -45,10 +45,10 @@ app = FastAPI(
     version="1.0.0"
 )
 
-# CORS 미들웨어 적용 (프론트엔드 통신용)
+# CORS 미들웨어
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"], # 개발 환경에서는 모두 허용, 운영 환경에서는 프론트 도메인만 허용하도록 변경
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -96,34 +96,25 @@ class UserUpdateRequest(BaseModel):
     major: Optional[str] = None
     status: Optional[str] = None
 
-class ConfigRequest(BaseModel):
-    key: str
-    value: str
-
 class EnrollmentPeriodRequest(BaseModel):
-    start_time: str # ISO Format
-    end_time: str # ISO Format
+    start_time: str  # ISO Format
+    end_time: str    # ISO Format
 
 class EnrollmentRequest(BaseModel):
     user_id: str
-    subject: str
-    college: str
-    department: str
-    room: str
+    lecture_id: int  # lecture_tb.lecture_id 참조
 
-# ---- API 라우터 (뼈대) ----
-
-# --- 헬퍼 함수 ---
+# ---- 헬퍼 함수 ----
 def is_enrollment_period_active(db: Session):
     """현재 시각이 수강신청 가능 기간인지 확인"""
     start_config = db.query(models.SystemConfig).filter(models.SystemConfig.key == "enrollment_start").first()
     end_config = db.query(models.SystemConfig).filter(models.SystemConfig.key == "enrollment_end").first()
-    
+
     if not start_config or not end_config:
-        return True # 설정이 없으면 기본적으로 허용 (테스트 편의성)
-    
+        return True  # 설정이 없으면 기본적으로 허용 (테스트 편의성)
+
     try:
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
         start = datetime.fromisoformat(start_config.value.replace("Z", "+00:00"))
         end = datetime.fromisoformat(end_config.value.replace("Z", "+00:00"))
         return start <= now <= end
@@ -131,21 +122,23 @@ def is_enrollment_period_active(db: Session):
         print(f"Period check error: {e}")
         return True
 
+
+# ---- API 라우터 ----
+
 @app.get("/")
 def read_root():
     return {"message": "무강대학교 AI 학사행정 API 서버가 실행 중입니다."}
 
+
+# --- 인증 ---
 @app.post("/api/v1/auth/register", status_code=status.HTTP_201_CREATED)
 def register_user(req: RegisterRequest, db: Session = Depends(get_db)):
-    """
-    학생 회원가입 로직 (비밀번호 암호화 후 DB에 안전하게 저장)
-    """
+    """학생 회원가입 (비밀번호 암호화 후 DB 저장)"""
     db_user = db.query(models.User).filter(models.User.student_id == req.student_id).first()
     if db_user:
         raise HTTPException(status_code=400, detail="이미 가입된 학번입니다.")
-    
+
     hashed_password = get_password_hash(req.password)
-    
     new_user = models.User(
         student_id=req.student_id,
         password_hash=hashed_password,
@@ -155,117 +148,90 @@ def register_user(req: RegisterRequest, db: Session = Depends(get_db)):
     db.add(new_user)
     db.commit()
     db.refresh(new_user)
-    
     return {"message": "회원가입이 정상적으로 완료되었습니다.", "user_id": new_user.id}
+
 
 @app.post("/api/v1/auth/login")
 def login(req: LoginRequest, db: Session = Depends(get_db)):
-    """
-    학생 학번(사번)과 비밀번호로 로그인 검증 (JWT 토큰 발급)
-    """
+    """학번과 비밀번호로 로그인 (JWT 발급)"""
     logger.info(f"로그인 시도: {req.student_id}")
-    
+
     user = db.query(models.User).filter(models.User.student_id == req.student_id).first()
     if not user:
         raise HTTPException(status_code=401, detail="존재하지 않는 학번입니다.")
-        
     if not verify_password(req.password, user.password_hash):
         raise HTTPException(status_code=401, detail="비밀번호가 올바르지 않습니다.")
 
-    # 정상 로그인 시, 사용자 정보를 바탕으로 JWT 토큰 발급
     access_token = create_access_token(data={"sub": user.student_id, "id": user.id})
     role = "admin" if "admin" in req.student_id.lower() or "prof" in req.student_id.lower() else "student"
 
     return {
-        "access_token": access_token, 
+        "access_token": access_token,
         "token_type": "bearer",
-        "user_id": user.id, 
+        "user_id": user.id,
         "name": user.name,
         "role": role
     }
 
-@app.post("/api/v1/chat/ask")
-def chat_ask(req: ChatRequest, db: Session = Depends(get_db)):
-    """
-    AI 학사 행정 상담 (RAG 기반 응답 로직 연결부 - Mocking)
-    """
-    logger.info(f"채팅 질의 수신 - session: {req.session_id}, msg: {req.message}")
-    
-    # 1. 채팅 세션 및 이력 DB 저장 추가
-    session = db.query(models.ChatSession).filter(models.ChatSession.id == req.session_id).first()
-    if not session:
-        session = models.ChatSession(id=req.session_id, user_id=req.user_id, title=req.message[:20])
-        db.add(session)
-        db.commit()
-        
-    db.add(models.ChatMessage(session_id=req.session_id, role="user", content=req.message))
-    db.commit()
-    
-    user_msg = req.message.lower()
-    reply_text = "질문하신 내용에 대해 현재 확인 중입니다. 학사지원팀에 문의해주세요."
-    source_info = []
 
-    # 키워드 기반 가상(Mock) 응답 라우팅
-    if "수강신청" in user_msg or "장바구니" in user_msg:
-        reply_text = "수강신청은 좌측 '수강 신청' 메뉴에서 진행하실 수 있습니다. 장바구니에 담은 후 정해진 기간 내에 최종 신청을 완료해야 합니다."
-        source_info = [{"title": "학사 규정: 제20조 수강신청", "url": "#sugang"}]
-    elif "휴학" in user_msg or "군휴학" in user_msg:
-        reply_text = "휴학 신청 서류(일반휴학원) 초안을 자동으로 생성하여 결재함에 제출했습니다. 교학팀의 검토 후 최종 승인됩니다."
-        source_info = [{"title": "학사 규정: 휴학 및 복학 안내", "url": "#leave"}]
-        # 휴학 폼 자동 생성 (AI 자동화 처리)
-        new_form = models.Form(
-            user_id=req.user_id,
-            form_type="일반휴학원",
-            form_data={"reason": "AI 챗봇을 통한 자동 휴학 신청 접수"},
-            status="pending"
-        )
-        db.add(new_form)
-        db.commit()
-    elif "장학금" in user_msg or "국가장학금" in user_msg:
-        reply_text = "성적우수 장학금은 별도의 신청 없이 자동으로 선발되며, 국가장학금은 매 학기 한국장학재단 홈페이지에서 신청하셔야 합니다."
-        source_info = [{"title": "장학 안내 공지", "url": "#scholarship"}]
-    elif "졸업" in user_msg or "요건" in user_msg:
-        reply_text = "졸업을 위해서는 130학점 이상 이수와 필수 전공/교양 과목을 모두 들어야 하며, 졸업 논문 혹은 대체 자격증(토익 800점 등)을 제출하셔야 합니다."
-        source_info = [{"title": "총칙: 졸업 요건 규정", "url": "#graduation"}]
-    else:
-        reply_text = f"말씀하신 '{req.message}' 에 대한 구체적인 문서를 찾고 있습니다. (RAG 연동 전 테스트 응답)"
+# --- 강의 (lecture_tb) ---
+@app.get("/api/v1/lectures")
+def get_lectures(db: Session = Depends(get_db)):
+    """강의 목록 전체 조회 (수강신청 화면용) - schedule_tb 조인"""
+    lectures = db.query(models.Lecture).all()
+    result = []
+    for lec in lectures:
+        schedules = [
+            {
+                "day_of_week": s.day_of_week,
+                "start_time": str(s.start_time) if s.start_time else None,
+                "end_time": str(s.end_time) if s.end_time else None,
+            }
+            for s in lec.schedules
+        ]
+        result.append({
+            "lecture_id": lec.lecture_id,
+            "course_no": lec.course_no,
+            "subject": lec.subject,
+            "department": lec.department,
+            "lec_grade": lec.lec_grade,
+            "credit": lec.credit,
+            "professor": lec.professor,
+            "classroom": lec.classroom,
+            "type": lec.type,
+            "capacity": lec.capacity,
+            "count": lec.count,
+            "schedules": schedules,
+        })
+    return {"lectures": result}
 
-    # 2. 챗봇의 응답도 DB에 저장
-    db.add(models.ChatMessage(session_id=req.session_id, role="assistant", content=reply_text))
-    db.commit()
 
-    return {
-        "reply": reply_text,
-        "sources": source_info
-    }
-
+# --- 수강신청 (enrollments) ---
 @app.get("/api/v1/enrollments/{user_id}")
 def get_user_enrollments(user_id: str, db: Session = Depends(get_db)):
-    """
-    사용자의 수강신청 내역 조회
-    """
+    """사용자의 수강신청 내역 조회 (lecture_tb 조인)"""
     enrollments = db.query(models.Enrollment).filter(models.Enrollment.user_id == user_id).all()
-    # Pydantic 응답 모델없이 직접 딕셔너리로 변환
     result = []
     for en in enrollments:
+        lec = en.lecture
         result.append({
             "id": en.id,
-            "subject": en.subject,
-            "college": en.college,
-            "department": en.department,
-            "room": en.room,
+            "lecture_id": en.lecture_id,
+            "subject": lec.subject if lec else None,
+            "department": lec.department if lec else None,
+            "classroom": lec.classroom if lec else None,
+            "professor": lec.professor if lec else None,
+            "type": lec.type if lec else None,
+            "credits": lec.credit if lec else None,
             "status": en.status,
-            "credits": en.credits,
             "created_at": en.created_at.isoformat()
         })
     return {"schedules": result}
 
+
 @app.post("/api/v1/enrollments")
 def create_enrollment(req: EnrollmentRequest, db: Session = Depends(get_db)):
-    """
-    학생 수강신청 건 1개 저장
-    """
-    # 기간 체크 추가
+    """수강신청 1건 저장 (정원 체크 + 낙관적 락)"""
     if not is_enrollment_period_active(db):
         raise HTTPException(status_code=403, detail="현재는 수강신청 기간이 아닙니다.")
 
@@ -273,21 +239,35 @@ def create_enrollment(req: EnrollmentRequest, db: Session = Depends(get_db)):
     if not user:
         raise HTTPException(status_code=404, detail="사용자 정보를 찾을 수 없습니다.")
 
-    # 중복 수강신청 검사 로직 추가
-    existing_enrollment = db.query(models.Enrollment).filter(
+    # 중복 수강신청 검사
+    existing = db.query(models.Enrollment).filter(
         models.Enrollment.user_id == req.user_id,
-        models.Enrollment.subject == req.subject
+        models.Enrollment.lecture_id == req.lecture_id
     ).first()
-    
-    if existing_enrollment:
+    if existing:
         raise HTTPException(status_code=400, detail="이미 신청(장바구니 담기)이 완료된 과목입니다.")
+
+    # lecture_tb 조회 및 정원 체크
+    lecture = db.query(models.Lecture).filter(models.Lecture.lecture_id == req.lecture_id).first()
+    if not lecture:
+        raise HTTPException(status_code=404, detail="강의 정보를 찾을 수 없습니다.")
+    if lecture.capacity > 0 and lecture.count >= lecture.capacity:
+        raise HTTPException(status_code=409, detail="수강 정원이 초과되었습니다.")
+
+    # 낙관적 락: version 확인 후 count 증가
+    original_version = lecture.version
+    updated_rows = db.query(models.Lecture).filter(
+        models.Lecture.lecture_id == req.lecture_id,
+        models.Lecture.version == original_version
+    ).update({"count": models.Lecture.count + 1, "version": original_version + 1})
+
+    if updated_rows == 0:
+        db.rollback()
+        raise HTTPException(status_code=409, detail="수강신청 중 충돌이 발생했습니다. 다시 시도해주세요.")
 
     new_enrollment = models.Enrollment(
         user_id=req.user_id,
-        subject=req.subject,
-        college=req.college,
-        department=req.department,
-        room=req.room,
+        lecture_id=req.lecture_id,
         status="cart"
     )
     db.add(new_enrollment)
@@ -295,10 +275,10 @@ def create_enrollment(req: EnrollmentRequest, db: Session = Depends(get_db)):
     db.refresh(new_enrollment)
     return {"message": "정상적으로 수강신청 테이블에 저장되었습니다.", "enrollment_id": new_enrollment.id}
 
+
 @app.put("/api/v1/enrollments/{enrollment_id}/confirm")
 def confirm_enrollment(enrollment_id: str, db: Session = Depends(get_db)):
-    """수강 장바구니 -> 최종 신청 확정"""
-    # 기간 체크 추가
+    """수강 장바구니 → 최종 신청 확정"""
     if not is_enrollment_period_active(db):
         raise HTTPException(status_code=403, detail="현재는 수강신청 기간이 아닙니다.")
 
@@ -309,71 +289,82 @@ def confirm_enrollment(enrollment_id: str, db: Session = Depends(get_db)):
     db.commit()
     return {"message": "최종 수강신청이 확정되었습니다."}
 
+
 @app.delete("/api/v1/enrollments/{enrollment_id}")
 def drop_enrollment(enrollment_id: str, db: Session = Depends(get_db)):
-    """수강 철회 (삭제)"""
+    """수강 철회 (lecture_tb count 감소)"""
     en = db.query(models.Enrollment).filter(models.Enrollment.id == enrollment_id).first()
     if not en:
         raise HTTPException(status_code=404, detail="해당 수강 내역이 없습니다.")
+
+    # count 감소
+    db.query(models.Lecture).filter(models.Lecture.lecture_id == en.lecture_id).update(
+        {"count": models.Lecture.count - 1}
+    )
     db.delete(en)
     db.commit()
     return {"message": "수강 철회가 완료되었습니다."}
 
+
+# --- 학생 통계 ---
 @app.get("/api/v1/student/{user_id}/stats")
 def get_student_stats(user_id: str, db: Session = Depends(get_db)):
-    """학생용: 이수 학점 및 성적 조회 (실제 DB 연동)"""
+    """학생용: 이수 학점 및 성적 조회"""
     enrollments = db.query(models.Enrollment).filter(
         models.Enrollment.user_id == user_id,
         models.Enrollment.status == "enrolled"
     ).all()
-    
-    current_credits = sum(e.credits for e in enrollments if e.credits)
-    
-    # 실제 성적 데이터 조회
+
+    current_credits = sum(en.lecture.credit for en in enrollments if en.lecture and en.lecture.credit)
+
     grades = db.query(models.Grade).filter(models.Grade.user_id == user_id).all()
-    
-    # 평점 4.5 기준 가중치 매핑
+
     grade_points = {"A+": 4.5, "A0": 4.0, "B+": 3.5, "B0": 3.0, "C+": 2.5, "C0": 2.0, "D+": 1.5, "D0": 1.0, "F": 0.0}
-    
+
     total_point_sum = 0
     total_credit_sum = 0
     for g in grades:
         en = db.query(models.Enrollment).filter(models.Enrollment.id == g.enrollment_id).first()
-        if en and g.grade_letter in grade_points:
-            total_point_sum += (grade_points[g.grade_letter] * en.credits)
-            total_credit_sum += en.credits
-    
+        if en and en.lecture and g.grade_letter in grade_points:
+            total_point_sum += grade_points[g.grade_letter] * en.lecture.credit
+            total_credit_sum += en.lecture.credit
+
     gpa = round(total_point_sum / total_credit_sum, 2) if total_credit_sum > 0 else 0.0
-    
-    # 더미 졸업 요건 계산 (기존 이수 학점 85점 가정 로직 유지)
-    grad_req_credits = 130
-    
+
     return {
-        "total_credits": total_credit_sum + 85,
-        "grad_req_credits": grad_req_credits,
+        "total_credits": total_credit_sum + 85,  # 기존 이수 학점 85 가정
+        "grad_req_credits": 130,
         "gpa": gpa,
         "current_semester_credits": current_credits
     }
 
+
+# --- 관리자: 수강 현황 ---
 @app.get("/api/v1/admin/enrollments")
 def get_admin_enrollments(db: Session = Depends(get_db)):
     """관리자용: 개설 과목별 수강생 전체 현황"""
     enrollments = db.query(models.Enrollment).all()
-    # 과목별 묶기
     summary = {}
     for en in enrollments:
-        if en.subject not in summary:
-            summary[en.subject] = {"subject": en.subject, "students": []}
+        lec = en.lecture
+        subject_key = lec.subject if lec else "Unknown"
+        if subject_key not in summary:
+            summary[subject_key] = {
+                "lecture_id": en.lecture_id,
+                "subject": subject_key,
+                "capacity": lec.capacity if lec else 0,
+                "count": lec.count if lec else 0,
+                "students": []
+            }
         user = db.query(models.User).filter(models.User.id == en.user_id).first()
-        student_info = {
+        summary[subject_key]["students"].append({
             "enrollment_id": en.id,
             "user_id": en.user_id,
             "student_id": user.student_id if user else "Unknown",
             "name": user.name if user else "Unknown"
-        }
-        summary[en.subject]["students"].append(student_info)
-    
+        })
     return {"classes": list(summary.values())}
+
 
 @app.get("/api/v1/admin/stats")
 def get_admin_stats(db: Session = Depends(get_db)):
@@ -381,7 +372,6 @@ def get_admin_stats(db: Session = Depends(get_db)):
     student_count = db.query(models.User).filter(models.User.degree_level == "undergraduate").count()
     enrollment_count = db.query(models.Enrollment).count()
     form_count = db.query(models.Form).count()
-    # 임의 통계 리턴
     return {
         "total_students": student_count,
         "total_enrollments": enrollment_count,
@@ -394,17 +384,64 @@ def get_admin_stats(db: Session = Depends(get_db)):
         ]
     }
 
+
+# --- 챗봇 ---
+@app.post("/api/v1/chat/ask")
+def chat_ask(req: ChatRequest, db: Session = Depends(get_db)):
+    """AI 학사 행정 상담 (RAG 기반 응답 로직 연결부 - Mocking)"""
+    logger.info(f"채팅 질의 수신 - session: {req.session_id}, msg: {req.message}")
+
+    session = db.query(models.ChatSession).filter(models.ChatSession.id == req.session_id).first()
+    if not session:
+        session = models.ChatSession(id=req.session_id, user_id=req.user_id, title=req.message[:20])
+        db.add(session)
+        db.commit()
+
+    db.add(models.ChatMessage(session_id=req.session_id, role="user", content=req.message))
+    db.commit()
+
+    user_msg = req.message.lower()
+    reply_text = "질문하신 내용에 대해 현재 확인 중입니다. 학사지원팀에 문의해주세요."
+    source_info = []
+
+    if "수강신청" in user_msg or "장바구니" in user_msg:
+        reply_text = "수강신청은 좌측 '수강 신청' 메뉴에서 진행하실 수 있습니다. 장바구니에 담은 후 정해진 기간 내에 최종 신청을 완료해야 합니다."
+        source_info = [{"title": "학사 규정: 제20조 수강신청", "url": "#sugang"}]
+    elif "휴학" in user_msg or "군휴학" in user_msg:
+        reply_text = "휴학 신청 서류(일반휴학원) 초안을 자동으로 생성하여 결재함에 제출했습니다. 교학팀의 검토 후 최종 승인됩니다."
+        source_info = [{"title": "학사 규정: 휴학 및 복학 안내", "url": "#leave"}]
+        db.add(models.Form(
+            user_id=req.user_id,
+            form_type="일반휴학원",
+            form_data={"reason": "AI 챗봇을 통한 자동 휴학 신청 접수"},
+            status="pending"
+        ))
+        db.commit()
+    elif "장학금" in user_msg or "국가장학금" in user_msg:
+        reply_text = "성적우수 장학금은 별도의 신청 없이 자동으로 선발되며, 국가장학금은 매 학기 한국장학재단 홈페이지에서 신청하셔야 합니다."
+        source_info = [{"title": "장학 안내 공지", "url": "#scholarship"}]
+    elif "졸업" in user_msg or "요건" in user_msg:
+        reply_text = "졸업을 위해서는 130학점 이상 이수와 필수 전공/교양 과목을 모두 들어야 하며, 졸업 논문 혹은 대체 자격증(토익 800점 등)을 제출하셔야 합니다."
+        source_info = [{"title": "총칙: 졸업 요건 규정", "url": "#graduation"}]
+    else:
+        reply_text = f"말씀하신 '{req.message}' 에 대한 구체적인 문서를 찾고 있습니다. (RAG 연동 전 테스트 응답)"
+
+    db.add(models.ChatMessage(session_id=req.session_id, role="assistant", content=reply_text))
+    db.commit()
+
+    return {"reply": reply_text, "sources": source_info}
+
+
+# --- 서류 ---
 @app.post("/api/v1/forms/generate")
 def generate_form(req: FormRequest):
-    """
-    문서 초안 자동 생성 (휴학 등)
-    """
-    # TODO: AI 문서 자동 완성 기능 연동
+    """문서 초안 자동 생성"""
     return {
         "form_id": "draft_001",
         "status": "draft",
         "preview_json": {"applicant": "test", "reason": req.reason}
     }
+
 
 @app.get("/api/v1/forms")
 def get_all_forms(db: Session = Depends(get_db)):
@@ -413,17 +450,16 @@ def get_all_forms(db: Session = Depends(get_db)):
     result = []
     for f in forms:
         user = db.query(models.User).filter(models.User.id == f.user_id).first()
-        student_id = user.student_id if user else "Unknown"
-        name = user.name if user else "Unknown"
         result.append({
             "id": f.id,
             "form_type": f.form_type,
             "status": f.status,
-            "student_id": student_id,
-            "name": name,
+            "student_id": user.student_id if user else "Unknown",
+            "name": user.name if user else "Unknown",
             "created_at": f.created_at.isoformat()
         })
     return {"forms": result}
+
 
 @app.put("/api/v1/forms/{form_id}/status")
 def update_form_status(form_id: str, req: FormStatusRequest, db: Session = Depends(get_db)):
@@ -435,66 +471,67 @@ def update_form_status(form_id: str, req: FormStatusRequest, db: Session = Depen
     db.commit()
     return {"message": f"서류 상태가 {req.status}(으)로 변경되었습니다."}
 
+
+# --- RAG ---
 @app.post("/api/v1/admin/rag/upload")
 def upload_rag_document(req: RAGUploadRequest, db: Session = Depends(get_db)):
-    """관리자용: 새로운 AI 지식베이스(RAG) 문서 업로드"""
-    # 문서 메타데이터 DB 저장
+    """관리자용: AI 지식베이스 문서 업로드"""
     new_doc = models.DocumentMetadata(
         doc_type="rag_knowledge",
         title=req.title,
-        source_url=req.content[:100] # 실제로는 벡터 DB의 포인터나 URL을 저장
+        source_url=req.content[:100]
     )
     db.add(new_doc)
     db.commit()
-    return {"message": f"'{req.title}' 항목이 AI 지식베이스에 성공적으로 임베딩(업로드) 되었습니다. (이제 챗봇이 해당 데이터를 기반으로 대답합니다.)"}
+    return {"message": f"'{req.title}' 항목이 AI 지식베이스에 성공적으로 임베딩(업로드) 되었습니다."}
 
-# --- 추가된 공지사항 게시판 API ---
+
+# --- 공지사항 ---
 @app.post("/api/v1/notices")
 def create_notice(req: NoticeRequest, db: Session = Depends(get_db)):
-    new_notice = models.Notice(title=req.title, content=req.content)
-    db.add(new_notice)
+    db.add(models.Notice(title=req.title, content=req.content))
     db.commit()
     return {"message": "공지가 등록되었습니다."}
+
 
 @app.get("/api/v1/notices")
 def get_notices(db: Session = Depends(get_db)):
     notices = db.query(models.Notice).order_by(models.Notice.created_at.desc()).all()
     return {"notices": notices}
 
-# --- 추가된 성적 입력 API ---
+
+# --- 성적 ---
 @app.post("/api/v1/admin/grades")
 def submit_grade(req: GradeRequest, db: Session = Depends(get_db)):
-    # 기존 성적이 있으면 업데이트, 없으면 생성
     existing = db.query(models.Grade).filter(models.Grade.enrollment_id == req.enrollment_id).first()
     if existing:
         existing.score = req.score
         existing.grade_letter = req.grade_letter
     else:
-        new_grade = models.Grade(
+        db.add(models.Grade(
             enrollment_id=req.enrollment_id,
             user_id=req.user_id,
             score=req.score,
             grade_letter=req.grade_letter
-        )
-        db.add(new_grade)
+        ))
     db.commit()
     return {"message": "성적이 정상적으로 입력되었습니다."}
 
-# --- 추가된 사용자 정보 수정 API ---
+
+# --- 사용자 정보 수정 ---
 @app.put("/api/v1/users/{user_id}")
 def update_user_profile(user_id: str, req: UserUpdateRequest, db: Session = Depends(get_db)):
     user = db.query(models.User).filter(models.User.id == user_id).first()
     if not user:
         raise HTTPException(status_code=404, detail="사용자를 찾을 수 없습니다.")
-    
-    if req.name: user.name = req.name
-    if req.major: user.major = req.major
+    if req.name:   user.name = req.name
+    if req.major:  user.major = req.major
     if req.status: user.status = req.status
-    
     db.commit()
     return {"message": "프로필 정보가 수정되었습니다."}
 
-# --- 수강신청 기간 설정 API ---
+
+# --- 수강신청 기간 설정 ---
 @app.get("/api/v1/admin/config/enrollment-period")
 def get_enrollment_period(db: Session = Depends(get_db)):
     start = db.query(models.SystemConfig).filter(models.SystemConfig.key == "enrollment_start").first()
@@ -505,26 +542,25 @@ def get_enrollment_period(db: Session = Depends(get_db)):
         "is_active": is_enrollment_period_active(db)
     }
 
+
 @app.post("/api/v1/admin/config/enrollment-period")
 def set_enrollment_period(req: EnrollmentPeriodRequest, db: Session = Depends(get_db)):
     start = db.query(models.SystemConfig).filter(models.SystemConfig.key == "enrollment_start").first()
     if not start:
-        start = models.SystemConfig(key="enrollment_start", value=req.start_time)
-        db.add(start)
+        db.add(models.SystemConfig(key="enrollment_start", value=req.start_time))
     else:
         start.value = req.start_time
 
     end = db.query(models.SystemConfig).filter(models.SystemConfig.key == "enrollment_end").first()
     if not end:
-        end = models.SystemConfig(key="enrollment_end", value=req.end_time)
-        db.add(end)
+        db.add(models.SystemConfig(key="enrollment_end", value=req.end_time))
     else:
         end.value = req.end_time
-    
+
     db.commit()
     return {"message": "수강신청 기간이 설정되었습니다."}
 
+
 if __name__ == "__main__":
     import uvicorn
-    # uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
-    pass
+    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)

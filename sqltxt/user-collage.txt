@@ -1,0 +1,23 @@
+CREATE TABLE depart_tb (
+    dept_no BIGSERIAL PRIMARY KEY,
+    college VARCHAR(50) NOT NULL,
+    depart VARCHAR(255) NOT NULL,
+    office_tel VARCHAR(50) NOT NULL
+);
+
+
+CREATE TYPE role_enum AS ENUM ('STUDENT', 'STAFF');
+CREATE TYPE status_enum AS ENUM ('재학', '휴학', '재직', '퇴직'); -- 필요한 상태 추가
+
+CREATE TABLE user_tb (
+    user_no BIGSERIAL PRIMARY KEY,
+    loginid VARCHAR(50) UNIQUE NOT NULL,
+    password VARCHAR(255) NOT NULL,
+    role role_enum NOT NULL,
+    user_name VARCHAR(50) NOT NULL,
+    -- 학년은 STUDENT일 때만 의미가 있으므로 NULL 허용
+    grade INTEGER, 
+    user_status status_enum NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
