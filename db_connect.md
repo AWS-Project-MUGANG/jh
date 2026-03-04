@@ -16,7 +16,7 @@
 
 2. **[SSH] 탭 (경비실 통과 정보)**
    * **체크박스**: `Use SSH Tunnel` 체크
-   * **Host/IP**: `43.203.238.71`
+   * **Host/IP**: `3.34.141.17`
    * **User Name**: `ec2-user`
    * **Authentication Method**: `Public Key` 선택
    * **Private Key**: 팀원분이 구글드라이브에 올린 **`mugang-key.pem` 파일을 다운받아서 이 칸에 넣습니다.**
