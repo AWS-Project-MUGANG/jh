@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>무강대학교 - 통합 학사행정 회원가입</title>
+  <link rel="stylesheet" href="../../css/main.css">
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
+  <style>
+    body {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      background-color: #f4f7f6;
+    }
+
+    .login-box {
+      background: white;
+      padding: 40px;
+      border-radius: 8px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      width: 100%;
+      max-width: 400px;
+    }
+
+    .login-box h1 {
+      color: var(--primary-color);
+      margin-bottom: 10px;
+      text-align: center;
+    }
+
+    .login-box p {
+      text-align: center;
+      color: #666;
+      margin-bottom: 30px;
+    }
+
+    .input-group {
+      margin-bottom: 20px;
+    }
+
+    .input-group label {
+      display: block;
+      margin-bottom: 5px;
+      color: #333;
+      font-weight: 500;
+    }
+
+    .input-group input,
+    .input-group select {
+      width: 100%;
+      padding: 10px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      font-size: 1rem;
+    }
+
+    .btn-login {
+      width: 100%;
+      padding: 12px;
+      background-color: var(--primary-color);
+      color: white;
+      border: none;
+      border-radius: 4px;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: background-color 0.2s;
+    }
+
+    .btn-login:hover {
+      background-color: #121858;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="login-box">
+    <h1>무강대학교</h1>
+    <p>통합 학사행정 서비스 회원가입</p>
+    <form id="registerForm" onsubmit="handleRegister(event)">
+      <div class="input-group">
+        <label for="studentId">학번/사번</label>
+        <input type="text" id="studentId" placeholder="학번/사번을 입력하세요" required>
+      </div>
+      <div class="input-group">
+        <label for="password">비밀번호</label>
+        <input type="password" id="password" placeholder="비밀번호를 입력하세요" required>
+      </div>
+      <div class="input-group">
+        <label for="name">이름</label>
+        <input type="text" id="name" placeholder="이름을 입력하세요" required>
+      </div>
+      <div class="input-group">
+        <label for="major">전공/소속</label>
+        <input type="text" id="major" placeholder="전공/소속을 입력하세요" required>
+      </div>
+      <div class="input-group">
+        <label for="role">역할 (권한)</label>
+        <select id="role">
+          <option value="student">학생 (Student)</option>
+          <option value="admin">교수/관리자 (Admin)</option>
+        </select>
+      </div>
+      <button type="submit" class="btn-login">회원가입</button>
+    </form>
+    <div style="margin-top: 15px; text-align: center;">
+      <a href="login.html" style="color: var(--primary-color); text-decoration: none;">이미 계정이 있으신가요? 로그인</a>
+    </div>
+  </div>
+
+  <script>
+    async function handleRegister(e) {
+      e.preventDefault();
+      const sid = document.getElementById('studentId').value;
+      const pwd = document.getElementById('password').value;
+      const name = document.getElementById('name').value;
+      const major = document.getElementById('major').value;
+      const role = document.getElementById('role').value;
+
+      if (sid && pwd && name && major) {
+        try {
+          const response = await fetch('/api/v1/auth/register', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ student_id: sid, password: pwd, name: name, major: major, role: role })
+          });
+
+          if (response.ok) {
+            alert('회원가입이 완료되었습니다. 로그인 페이지로 이동합니다.');
+            window.location.href = 'login.html';
+          } else {
+            const errorData = await response.json();
+            alert(`회원가입 실패: ${errorData.detail}`);
+          }
+        } catch (error) {
+          console.error('Register error:', error);
+          alert('서버 연결에 실패했습니다.');
+        }
+      }
+    }
+  </script>
+</body>
+
+</html>

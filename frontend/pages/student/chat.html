@@ -131,7 +131,7 @@
 
             try {
                 // 2. 백엔드 AI 챗봇 API 호출
-                const response = await fetch('http://localhost:8000/api/v1/chat/ask', {
+                const response = await fetch('/api/v1/chat/ask', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({

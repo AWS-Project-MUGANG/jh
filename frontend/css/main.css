@@ -235,18 +235,25 @@ body {
 .schedule-table {
     width: 100%;
     border-collapse: collapse;
+    table-layout: fixed;
 }
 
 .schedule-table th,
 .schedule-table td {
     border: 1px solid var(--border-color);
-    padding: 10px;
+    padding: 8px 5px;
     text-align: center;
+    word-break: break-all;
+    vertical-align: middle;
 }
 
 .schedule-table th {
     background-color: var(--table-bg);
     font-weight: 500;
+}
+
+.schedule-table th:first-child {
+    width: 80px;
 }
 
 .time-cell {

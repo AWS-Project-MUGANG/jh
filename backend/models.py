@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, Integer, DateTime, ForeignKey, JSON, Time, Enum as SAEnum
+from sqlalchemy import Column, String, Integer, BigInteger, DateTime, ForeignKey, JSON, Time, Enum as SAEnum
 from sqlalchemy.orm import relationship
 from datetime import datetime
 import uuid
@@ -6,17 +6,28 @@ import uuid
 from database import Base
 
 
+class Depart(Base):
+    __tablename__ = "depart_tb"
+
+    dept_no = Column(BigInteger, primary_key=True, autoincrement=True)
+    college = Column(String(50), nullable=False)
+    depart = Column(String(255), nullable=False)
+    office_tel = Column(String(50), nullable=False)
+
+
 class User(Base):
     __tablename__ = "users"
 
     id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
-    student_id = Column(String(20), unique=True, nullable=False)
+    student_id = Column(String(50), unique=True, nullable=False)  # loginid
     password_hash = Column(String(255), nullable=False)
     name = Column(String(50), nullable=False)
     major = Column(String(100), nullable=False)
     degree_level = Column(String(20))
     language = Column(String(10), default="ko")
+    grade = Column(Integer, nullable=True)  # 학년 (STUDENT일 때만 유의미)
     status = Column(String(20), default="enrolled")
+    role = Column(String(20), default="student")
     created_at = Column(DateTime, default=datetime.utcnow)
 
 
@@ -139,3 +150,4 @@ class SystemConfig(Base):
 
     key = Column(String(100), primary_key=True)
     value = Column(String(255), nullable=False)
+

@@ -1,8 +1,10 @@
 import logging
+import os
 from fastapi import FastAPI, Depends, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
-from typing import List, Optional
+from typing import Optional
 from sqlalchemy.orm import Session
 from passlib.context import CryptContext
 from jose import jwt
@@ -60,6 +62,7 @@ class RegisterRequest(BaseModel):
     password: str
     name: str
     major: str
+    role: Optional[str] = "student"
 
 class LoginRequest(BaseModel):
     student_id: str
@@ -125,6 +128,10 @@ def is_enrollment_period_active(db: Session):
 
 # ---- API 라우터 ----
 
+@app.get("/api/health")
+def api_status():
+    return {"message": "무강대학교 AI 학사행정 API 서버가 정상 실행 중입니다."}
+
 @app.get("/")
 def read_root():
     return {"message": "무강대학교 AI 학사행정 API 서버가 실행 중입니다."}
@@ -143,7 +150,8 @@ def register_user(req: RegisterRequest, db: Session = Depends(get_db)):
         student_id=req.student_id,
         password_hash=hashed_password,
         name=req.name,
-        major=req.major
+        major=req.major,
+        role=req.role
     )
     db.add(new_user)
     db.commit()
@@ -163,14 +171,13 @@ def login(req: LoginRequest, db: Session = Depends(get_db)):
         raise HTTPException(status_code=401, detail="비밀번호가 올바르지 않습니다.")
 
     access_token = create_access_token(data={"sub": user.student_id, "id": user.id})
-    role = "admin" if "admin" in req.student_id.lower() or "prof" in req.student_id.lower() else "student"
 
     return {
         "access_token": access_token,
         "token_type": "bearer",
         "user_id": user.id,
         "name": user.name,
-        "role": role
+        "role": user.role
     }
 
 
@@ -206,7 +213,9 @@ def get_lectures(db: Session = Depends(get_db)):
     return {"lectures": result}
 
 
+
 # --- 수강신청 (enrollments) ---
+
 @app.get("/api/v1/enrollments/{user_id}")
 def get_user_enrollments(user_id: str, db: Session = Depends(get_db)):
     """사용자의 수강신청 내역 조회 (lecture_tb 조인)"""
@@ -560,6 +569,11 @@ def set_enrollment_period(req: EnrollmentPeriodRequest, db: Session = Depends(ge
     db.commit()
     return {"message": "수강신청 기간이 설정되었습니다."}
 
+# --- 프론트엔드 정적 파일 서빙 ---
+# (API 경로를 먼저 정의한 후 마지막에 마운트해야 API가 우선순위를 가집니다)
+frontend_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "frontend"))
+if os.path.exists(frontend_dir):
+    app.mount("/", StaticFiles(directory=frontend_dir, html=True), name="frontend")
 
 if __name__ == "__main__":
     import uvicorn

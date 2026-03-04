@@ -1,11 +1,6 @@
-// 모의 데이터
-const mockSugangList = [
-    { id: 1, college: "사회과학대학", department: "아동가족복지학과", subject: "인간행동과 사회환경", type: "전공필수", room: "대강당", credit: 3, capacity: 60, applied: 24, times: [{day: 1, time: 0}, {day: 3, time: 0}] },
-    { id: 2, college: "사회과학대학", department: "아동가족복지학과", subject: "여성과 사회", type: "교양필수", room: "온라인 강의", credit: 3, capacity: 200, applied: 198, times: [{day: 2, time: 1}, {day: 4, time: 1}] },
-    { id: 3, college: "사회과학대학", department: "아동가족복지학과", subject: "영어 회화 II", type: "교양선택", room: "306호", credit: 2, capacity: 15, applied: 15, times: [{day: 5, time: 2}] },
-    { id: 4, college: "사회과학대학", department: "아동가족복지학과", subject: "영유아 발달", type: "전공필수", room: "사 502호", credit: 3, capacity: 40, applied: 38, times: [{day: 2, time: 3}, {day: 4, time: 3}] }
-];
-  
+// 강의 목록을 저장할 전역 변수 (API 연동)
+let courseList = [];
+
 // 기존 장바구니 데이터 대신 백엔드에서 불러옵니다.
 let cartData = [];
 
@@ -23,42 +18,58 @@ const panelTimetable = document.getElementById('panel-timetable');
 
 // 탭 전환 기능
 function switchTab(tabName) {
+    console.log('Switching to tab:', tabName);
     // 모든 탭 버튼 비활성화
     document.querySelectorAll('.sidebar-nav .nav-item').forEach(btn => btn.classList.remove('active'));
     // 모든 패널 숨김
-    document.querySelectorAll('.content-area .panel').forEach(panel => panel.style.display = 'none');
+    document.querySelectorAll('.content-area .panel').forEach(panel => {
+        panel.style.display = 'none';
+        panel.classList.remove('active');
+    });
     
-    // 선택된 탭 활성화
-    if (tabName === 'sugang') {
-        document.getElementById('tab-sugang').classList.add('active');
-        panelSugang.style.display = 'block';
-    } else if (tabName === 'certificate') {
-        document.getElementById('tab-certificate').classList.add('active');
-        document.getElementById('panel-certificate').style.display = 'block';
-    } else if (tabName === 'grades') {
-        document.getElementById('tab-grades').classList.add('active');
-        document.getElementById('panel-grades').style.display = 'block';
-        loadDetailedGrades();
-    } else if (tabName === 'profile') {
-        document.getElementById('tab-profile').classList.add('active');
-        document.getElementById('panel-profile').style.display = 'block';
+    const targetPanel = document.getElementById(`panel-${tabName}`);
+    const targetTab = document.getElementById(`tab-${tabName}`);
+
+    if (targetPanel && targetTab) {
+        targetTab.classList.add('active');
+        targetPanel.style.display = 'block';
+        targetPanel.classList.add('active');
+        
+        // 특정 탭 진입 시 초기화 로직
+        if (tabName === 'grades') {
+            loadDetailedGrades();
+        }
+    } else {
+        console.error(`Tab or Panel not found for: ${tabName}`);
     }
+}
+
+// 수강목록 API에서 불러오기
+async function loadCourseList() {
+    try {
+        const res = await fetch('/api/v1/courses');
+        if(res.ok) {
+            const data = await res.json();
+            courseList = data.courses;
+            renderSugangList();
+        }
+    } catch(e) { console.error('Failed to load courses:', e); }
 }
 
 // 수강목록 렌더링
 function renderSugangList() {
     sugangTbody.innerHTML = '';
-    mockSugangList.forEach(item => {
+    courseList.forEach(item => {
         const tr = document.createElement('tr');
         tr.innerHTML = `
-            <td>${item.college}</td>
-            <td>${item.department}</td>
+            <td>${item.college || '-'}</td>
+            <td>${item.department || '-'}</td>
             <td>${item.subject}</td>
-            <td>${item.type}</td>
-            <td>${item.room}</td>
+            <td>${item.type || '-'}</td>
+            <td>${item.room || '-'}</td>
             <td>${item.credit}</td>
             <td>${item.capacity}</td>
-            <td><button class="btn-apply" onclick="addToCart(${item.id})">담기</button></td>
+            <td><button class="btn-apply" onclick="addToCart('${item.id}')">담기</button></td>
         `;
         sugangTbody.appendChild(tr);
     });
@@ -102,7 +113,7 @@ window.confirmEnrollment = async function(id) {
     if(!isEnrollmentActive) return alert("현재는 수강신청 기간이 아닙니다.");
     if(!confirm("이 과목을 최종 수강신청하시겠습니까?")) return;
     try {
-        const res = await fetch(`http://localhost:8000/api/v1/enrollments/${id}/confirm`, {
+        const res = await fetch(`/api/v1/enrollments/${id}/confirm`, {
             method: 'PUT'
         });
         if(res.ok) {
@@ -117,7 +128,7 @@ window.confirmEnrollment = async function(id) {
 window.dropEnrollment = async function(id) {
     if(!confirm("정말로 이 과목을 철회/삭제하시겠습니까?")) return;
     try {
-        const res = await fetch(`http://localhost:8000/api/v1/enrollments/${id}`, {
+        const res = await fetch(`/api/v1/enrollments/${id}`, {
             method: 'DELETE'
         });
         if(res.ok) {
@@ -137,7 +148,7 @@ window.addToCart = async function(id) {
         return;
     }
 
-    const item = mockSugangList.find(c => c.id === id);
+    const item = courseList.find(c => c.id === id);
     if (!item) return;
 
     const exists = cartData.find(c => c.subject === item.subject);
@@ -147,7 +158,7 @@ window.addToCart = async function(id) {
     }
     
     try {
-        const response = await fetch('http://localhost:8000/api/v1/enrollments', {
+        const response = await fetch('/api/v1/enrollments', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -191,7 +202,8 @@ function renderTimetable() {
     const colors = ['#e3f2fd', '#e8f5e9', '#fff3e0', '#fce4ec', '#f3e5f5'];
     
     cartData.forEach((cartItem, index) => {
-        const mockItem = mockSugangList.find(m => m.subject === cartItem.subject);
+        // 기존은 subject 매칭이었으나 API 구조에 맞춰 매칭 로직 간소화
+        const mockItem = courseList.find(c => c.subject === cartItem.subject);
         if(mockItem && mockItem.times) {
             const color = colors[index % colors.length];
             mockItem.times.forEach(t => {
@@ -211,7 +223,7 @@ function renderTimetable() {
 async function loadEnrollments() {
     if (!userId) return;
     try {
-        const response = await fetch(`http://localhost:8000/api/v1/enrollments/${userId}`);
+        const response = await fetch(`/api/v1/enrollments/${userId}`);
         if (response.ok) {
             const data = await response.json();
             cartData = data.schedules;
@@ -226,7 +238,7 @@ async function loadEnrollments() {
 // 수강신청 기간 확인
 async function checkEnrollmentPeriod() {
     try {
-        const res = await fetch('http://localhost:8000/api/v1/admin/config/enrollment-period');
+        const res = await fetch('/api/v1/admin/config/enrollment-period');
         if(res.ok) {
             const data = await res.json();
             const banner = document.getElementById('enrollment-period-banner');
@@ -254,7 +266,7 @@ async function checkEnrollmentPeriod() {
 async function loadStats() {
     if (!userId) return;
     try {
-        const res = await fetch(`http://localhost:8000/api/v1/student/${userId}/stats`);
+        const res = await fetch(`/api/v1/student/${userId}/stats`);
         if(res.ok) {
             const data = await res.json();
             const statTotal = document.getElementById('stat-total');
@@ -270,7 +282,7 @@ async function loadStats() {
 // 공지사항 불러오기
 async function loadNotices() {
     try {
-        const res = await fetch('http://localhost:8000/api/v1/notices');
+        const res = await fetch('/api/v1/notices');
         if(res.ok) {
             const data = await res.json();
             const listDiv = document.getElementById('student-notice-list');
@@ -288,7 +300,7 @@ async function loadNotices() {
 // 상세 성적 데이터 불러오기
 async function loadDetailedGrades() {
     try {
-        const res = await fetch(`http://localhost:8000/api/v1/enrollments/${userId}`);
+        const res = await fetch(`/api/v1/enrollments/${userId}`);
         if(res.ok) {
             const data = await res.json();
             const tbody = document.getElementById('student-grade-tbody');
@@ -317,7 +329,7 @@ async function updateProfile() {
     if(!name || !major) return alert("수정할 값을 입력하세요.");
 
     try {
-        const res = await fetch(`http://localhost:8000/api/v1/users/${userId}`, {
+        const res = await fetch(`/api/v1/users/${userId}`, {
             method: 'PUT',
             headers: {'Content-Type': 'application/json'},
             body: JSON.stringify({name, major})
@@ -336,9 +348,41 @@ window.onload = async function() {
         window.location.href = '../auth/login.html';
         return;
     }
-    renderSugangList();
+    await loadCourseList();
     await checkEnrollmentPeriod();
     await loadEnrollments();
     await loadStats();
     await loadNotices();
+};
+
+window.generateCertificatePDF = async function() {
+    // 1. 값 채우기
+    const nameStr = document.querySelector('.student-info .name')?.innerText || '홍길동';
+    const idStr = document.querySelector('.student-info .id')?.innerText || '20201234';
+    const deptStr = document.querySelector('.department-info p')?.innerText || '사회과학대학';
+    const subDeptStr = document.querySelector('.department-info .sub-dept')?.innerText.replace('2학년', '').trim() || '아동가족복지학과';
+    
+    document.getElementById('cert-name').innerText = nameStr;
+    document.getElementById('cert-id').innerText = idStr;
+    document.getElementById('cert-major').innerText = `${deptStr} ${subDeptStr}`;
+    
+    const today = new Date();
+    document.getElementById('cert-date').innerText = `${today.getFullYear()}년 ${today.getMonth() + 1}월 ${today.getDate()}일`;
+
+    // 2. 렌더링 및 PDF 생성
+    const template = document.getElementById('pdf-certificate-template');
+    try {
+        const canvas = await html2canvas(template, { scale: 2 });
+        const imgData = canvas.toDataURL('image/png');
+        
+        const pdf = new window.jspdf.jsPDF('p', 'pt', 'a4');
+        const pdfWidth = pdf.internal.pageSize.getWidth();
+        const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+        
+        pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+        pdf.save('무강대학교_재학증명서.pdf');
+    } catch (e) {
+        console.error("PDF 생성 오류:", e);
+        alert("PDF 생성 중 오류가 발생했습니다.");
+    }
 };
