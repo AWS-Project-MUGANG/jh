@@ -59,7 +59,7 @@
             <nav class="sidebar-nav">
                 <button class="nav-item active">강좌 수강생 관리</button>
                 <button class="nav-item" onclick="location.href='approvals.html'">결재 / 서류 반려함</button>
-                <button class="nav-item">학사 규정 AI 업데이트</button>
+                <button class="nav-item" onclick="location.href='rag_update.html'">학사 규정 AI 업데이트</button>
                 <button class="nav-item logout-btn" onclick="location.href='../auth/login.html'">로그아웃</button>
             </nav>
         </aside>
@@ -77,51 +77,71 @@
                 <h2>강의 종합 현황</h2>
                 <div class="stat-grid">
                     <div class="admin-stat-card">
-                        <p>내 강의 수강 대기생</p>
-                        <div class="stat-number">142 명</div>
+                        <p>대학교 전체 수강 신청 건수</p>
+                        <div class="stat-number" id="admin-total-enrollments">0 건</div>
                     </div>
                     <div class="admin-stat-card">
-                        <p>승인 가능한 휴복학 처리건</p>
-                        <div class="stat-number">7 건</div>
+                        <p>승인 가능한 대기 서류</p>
+                        <div class="stat-number" id="admin-pending-forms">0 건</div>
                     </div>
                     <div class="admin-stat-card">
-                        <p>시스템 접수된 무강 AI 질문량</p>
-                        <div class="stat-number">1,204 건</div>
+                        <p>현재 가입된 학생 수</p>
+                        <div class="stat-number" id="admin-total-students">0 명</div>
                     </div>
                 </div>
 
+                <!-- 수강신청 기간 설정 영역 추가 -->
+                <section class="list-section"
+                    style="margin-bottom: 30px; background: #e3f2fd; padding: 20px; border-radius: 8px; border: 1px solid #90caf9;">
+                    <h3>📅 수강신청 기간 설정</h3>
+                    <div style="display: flex; gap: 15px; margin-top: 10px; align-items: flex-end;">
+                        <div style="flex: 1;">
+                            <label style="font-size: 0.9rem; color: #555;">시작 일시</label>
+                            <input type="datetime-local" id="period-start"
+                                style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
+                        </div>
+                        <div style="flex: 1;">
+                            <label style="font-size: 0.9rem; color: #555;">종료 일시</label>
+                            <input type="datetime-local" id="period-end"
+                                style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
+                        </div>
+                        <button class="btn-approve" onclick="saveEnrollmentPeriod()" style="height: 38px;">기간
+                            저장</button>
+                    </div>
+                    <p id="current-period-info" style="margin-top: 10px; font-weight: bold; color: #1565c0;"></p>
+                </section>
+
+                <!-- 공지사항 등록 영역 추가 -->
+                <section class="list-section"
+                    style="margin-bottom: 30px; background: #f9f9f9; padding: 20px; border-radius: 8px;">
+                    <h3>📣 신규 공지사항 등록</h3>
+                    <div style="display: flex; gap: 10px; margin-top: 10px;">
+                        <input type="text" id="notice-title" placeholder="공지 제목"
+                            style="flex: 2; padding: 10px; border: 1px solid #ddd; border-radius: 4px;">
+                        <input type="text" id="notice-content" placeholder="공지 내용 요약"
+                            style="flex: 4; padding: 10px; border: 1px solid #ddd; border-radius: 4px;">
+                        <button class="btn-approve" onclick="postNotice()" style="flex: 1; white-space: nowrap;">공지
+                            올리기</button>
+                    </div>
+                </section>
+
                 <!-- 강사/관리자 전용 데이터 테이블 (추가 구축 예정 영역) -->
                 <section class="list-section">
-                    <h2>내 강좌 수강생 명단 (인간행동과 사회환경)</h2>
+                    <h2>대학 전체 강좌별 수강생 명단 & 성적 입력</h2>
                     <div class="table-wrapper">
                         <table class="data-table">
                             <thead>
                                 <tr>
-                                    <th>소속 대학</th>
-                                    <th>학과</th>
+                                    <th>과목명</th>
                                     <th>학번</th>
                                     <th>이름</th>
-                                    <th>상태</th>
-                                    <th>관리</th>
+                                    <th>성적 입력 (0~100)</th>
+                                    <th>등급 (A~F)</th>
+                                    <th>저장</th>
                                 </tr>
                             </thead>
-                            <tbody>
-                                <tr>
-                                    <td>사회과학대학</td>
-                                    <td>가정복지학과</td>
-                                    <td>22517717</td>
-                                    <td>임정현</td>
-                                    <td><span style="color:green">신청완료</span></td>
-                                    <td><button class="btn-apply" style="background-color:gray">취소 반려</button></td>
-                                </tr>
-                                <tr>
-                                    <td>상경대학</td>
-                                    <td>경영학과</td>
-                                    <td>20210001</td>
-                                    <td>김철수</td>
-                                    <td><span style="color:orange">대기(초과)</span></td>
-                                    <td><button class="btn-apply">강제 승인</button></td>
-                                </tr>
+                            <tbody id="admin-roster-tbody">
+                                <!-- JS 동적 렌더링 -->
                             </tbody>
                         </table>
                     </div>
@@ -129,6 +149,142 @@
             </div>
         </main>
     </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            // 세션 체크
+            if (!localStorage.getItem('access_token')) {
+                window.location.href = '../auth/login.html';
+                return;
+            }
+
+            try {
+                // 1. 통계 불러오기
+                const statRes = await fetch('http://localhost:8000/api/v1/admin/stats');
+                if (statRes.ok) {
+                    const stats = await statRes.json();
+                    document.getElementById('admin-total-enrollments').innerText = stats.total_enrollments + " 건";
+                    document.getElementById('admin-pending-forms').innerText = stats.pending_forms + " 건";
+                    document.getElementById('admin-total-students').innerText = stats.total_students + " 명";
+                }
+
+                // 2. 수강생 명단 불러오기
+                const enrollRes = await fetch('http://localhost:8000/api/v1/admin/enrollments');
+                if (enrollRes.ok) {
+                    const data = await enrollRes.json();
+                    const tbody = document.getElementById('admin-roster-tbody');
+                    tbody.innerHTML = '';
+
+                    if (data.classes.length === 0) {
+                        tbody.innerHTML = '<tr><td colspan="3" style="text-align:center;">신청된 수강 내역이 없습니다.</td></tr>';
+                    }
+
+                    data.classes.forEach(cls => {
+                        cls.students.forEach(std => {
+                            const tr = document.createElement('tr');
+                            tr.innerHTML = `
+                                <td><strong>${cls.subject}</strong></td>
+                                <td>${std.student_id}</td>
+                                <td>${std.name}</td>
+                                <td><input type="number" id="score-${std.enrollment_id}" placeholder="점수" style="width:60px; padding:5px;"></td>
+                                <td>
+                                    <select id="letter-${std.enrollment_id}" style="padding:5px;">
+                                        <option value="A+">A+</option><option value="A0">A0</option>
+                                        <option value="B+">B+</option><option value="B0">B0</option>
+                                        <option value="C+">C+</option><option value="C0">C0</option>
+                                        <option value="D+">D+</option><option value="D0">D0</option>
+                                        <option value="F">F</option>
+                                    </select>
+                                </td>
+                                <td><button class="btn-apply" onclick="submitGrade('${std.enrollment_id}', '${std.user_id}')">등록</button></td>
+                            `;
+                            tbody.appendChild(tr);
+                        });
+                    });
+                }
+            } catch (err) {
+                console.error("Admin dashboard load error:", err);
+            }
+        });
+
+        async function postNotice() {
+            const title = document.getElementById('notice-title').value;
+            const content = document.getElementById('notice-content').value;
+            if (!title || !content) return alert("제목과 내용을 입력하세요.");
+
+            try {
+                const res = await fetch('http://localhost:8000/api/v1/notices', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ title, content })
+                });
+                if (res.ok) {
+                    alert("공지사항이 등록되었습니다.");
+                    document.getElementById('notice-title').value = '';
+                    document.getElementById('notice-content').value = '';
+                }
+            } catch (e) { console.error(e); }
+        }
+
+        async function submitGrade(enId, userId) {
+            const score = document.getElementById(`score-${enId}`).value;
+            const letter = document.getElementById(`letter-${enId}`).value;
+            if (!score) return alert("점수를 입력하세요.");
+
+            try {
+                const res = await fetch('http://localhost:8000/api/v1/admin/grades', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        enrollment_id: enId,
+                        user_id: userId,
+                        score: parseInt(score),
+                        grade_letter: letter
+                    })
+                });
+                if (res.ok) alert("성적이 성공적으로 등록되었습니다.");
+            } catch (e) { console.error(e); }
+        }
+        async function loadEnrollmentPeriod() {
+            try {
+                const res = await fetch('http://localhost:8000/api/v1/admin/config/enrollment-period');
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data.start && data.end) {
+                        // datetime-local format (YYYY-MM-DDTHH:mm)
+                        document.getElementById('period-start').value = data.start.substring(0, 16);
+                        document.getElementById('period-end').value = data.end.substring(0, 16);
+                        document.getElementById('current-period-info').innerText =
+                            `현재 설정: ${data.start.replace('T', ' ')} ~ ${data.end.replace('T', ' ')} (${data.is_active ? '진행중' : '기간아님'})`;
+                    }
+                }
+            } catch (e) { console.error(e); }
+        }
+
+        async function saveEnrollmentPeriod() {
+            const start = document.getElementById('period-start').value;
+            const end = document.getElementById('period-end').value;
+            if (!start || !end) return alert("시작 및 종료 시간을 선택하세요.");
+
+            try {
+                const res = await fetch('http://localhost:8000/api/v1/admin/config/enrollment-period', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        start_time: new Date(start).toISOString(),
+                        end_time: new Date(end).toISOString()
+                    })
+                });
+                if (res.ok) {
+                    alert("수강신청 기간이 저장되었습니다.");
+                    loadEnrollmentPeriod();
+                }
+            } catch (e) { console.error(e); }
+        }
+
+        // 초기 로드 시 실행
+        loadEnrollmentPeriod();
+    </script>
 </body>
 
 </html>

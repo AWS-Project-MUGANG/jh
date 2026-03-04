@@ -107,6 +107,77 @@
             </div>
         </main>
     </div>
+    <script>
+        const chatHistory = document.querySelector('.chat-history');
+        const inputField = document.querySelector('.chat-input-area input');
+        const sendBtn = document.querySelector('.btn-send');
+
+        // 탭 열때마다 고유한 세션 아이디 생성
+        const currentSessionId = 'sess_' + Math.random().toString(36).substr(2, 9);
+
+        async function sendMessage() {
+            const message = inputField.value.trim();
+            if (!message) return;
+
+            // 1. 사용자 메시지 화면에 표시
+            const userMsgDiv = document.createElement('div');
+            userMsgDiv.className = 'message msg-user';
+            userMsgDiv.textContent = message;
+            chatHistory.appendChild(userMsgDiv);
+
+            // 입력창 초기화 및 스크롤 내리기
+            inputField.value = '';
+            chatHistory.scrollTop = chatHistory.scrollHeight;
+
+            try {
+                // 2. 백엔드 AI 챗봇 API 호출
+                const response = await fetch('http://localhost:8000/api/v1/chat/ask', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        user_id: localStorage.getItem('user_id') || 'test_student',
+                        session_id: currentSessionId,
+                        message: message
+                    })
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+
+                    // 3. AI 답변 화면에 표시
+                    const aiMsgDiv = document.createElement('div');
+                    aiMsgDiv.className = 'message msg-ai';
+                    aiMsgDiv.textContent = data.reply;
+
+                    // 출처(Source)가 있으면 같이 표시
+                    if (data.sources && data.sources.length > 0) {
+                        const sourceP = document.createElement('p');
+                        sourceP.style.fontSize = '0.8rem';
+                        sourceP.style.marginTop = '10px';
+                        sourceP.innerHTML = `참고 문서: <a href="${data.sources[0].url}" style="color: #bbdefb">${data.sources[0].title}</a>`;
+                        aiMsgDiv.appendChild(sourceP);
+                    }
+
+                    chatHistory.appendChild(aiMsgDiv);
+                } else {
+                    throw new Error('Server Return Error');
+                }
+            } catch (error) {
+                const errorMsgDiv = document.createElement('div');
+                errorMsgDiv.className = 'message msg-ai';
+                errorMsgDiv.textContent = "AI 서버 연결에 실패했습니다. (백엔드가 켜져있는지 확인해주세요)";
+                errorMsgDiv.style.backgroundColor = 'red';
+                chatHistory.appendChild(errorMsgDiv);
+            }
+
+            chatHistory.scrollTop = chatHistory.scrollHeight;
+        }
+
+        sendBtn.addEventListener('click', sendMessage);
+        inputField.addEventListener('keypress', function (e) {
+            if (e.key === 'Enter') sendMessage();
+        });
+    </script>
 </body>
 
 </html>

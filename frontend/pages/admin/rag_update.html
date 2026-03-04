@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+  <meta charset="UTF-8">
+  <title>AI 학사 규정 업데이트</title>
+  <link rel="stylesheet" href="../../css/main.css">
+  <style>
+    .sidebar-header {
+      background-color: #37474f;
+    }
+
+    .logo-area h1 {
+      color: #37474f;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="app-container">
+    <!-- 사이드바 -->
+    <aside class="sidebar">
+      <div class="sidebar-header">
+        <div class="student-info"><span class="name">김무강 교수</span></div>
+        <div class="department-info">
+          <p>Admin-0012</p>
+        </div>
+      </div>
+      <nav class="sidebar-nav">
+        <button class="nav-item" onclick="location.href='dashboard.html'">대시보드 홈</button>
+        <button class="nav-item active">학사 규정 AI 업데이트</button>
+        <button class="nav-item logout-btn" onclick="location.href='../auth/login.html'">로그아웃</button>
+      </nav>
+    </aside>
+
+    <!-- 메인 콘텐츠 -->
+    <main class="main-content">
+      <header class="top-header">
+        <div class="logo-area">
+          <h2>지식베이스(RAG) 훈련 센터</h2>
+        </div>
+      </header>
+      <div class="content-area">
+        <div
+          style="background: white; padding: 25px; border-radius: 8px; border: 1px solid var(--border-color); box-shadow: 0 2px 10px rgba(0,0,0,0.05);">
+          <p style="margin-bottom: 20px; color: #1565c0; font-weight: 500;">
+            💡 <strong>AI 챗봇 무강이 훈련하기:</strong>
+            여기에 입력된 새로운 학교 규정, 공지사항 데이터는 AWS Bedrock(LLM) 환경의 벡터 스토어로 전송되어, 즉시 챗봇 상담 지식으로 활용됩니다.
+          </p>
+
+          <label style="font-weight: bold; font-size: 1.1rem;">추가할 규정/공지 제목</label><br>
+          <input type="text" id="rag-title" placeholder="예: 2026학년도 통학버스 및 기숙사 셔틀 운행 개편 안내"
+            style="width: 100%; padding: 12px; margin-top: 8px; margin-bottom: 20px; border: 1px solid #ccc; border-radius: 4px; font-size: 1rem;"><br>
+
+          <label style="font-weight: bold; font-size: 1.1rem;">텍스트 데이터 (학습용 Data)</label><br>
+          <textarea id="rag-content" rows="12"
+            placeholder="전체 내용을 이곳에 복사 붙여넣기 하세요. AI가 내용을 형태소 단위로 분리(Chunking)하여 학습합니다..."
+            style="width: 100%; padding: 12px; margin-top: 8px; margin-bottom: 20px; border: 1px solid #ccc; border-radius: 4px; font-size: 1rem; resize: vertical;"></textarea><br>
+
+          <button class="btn-approve" onclick="submitRag()"
+            style="padding: 12px 25px; background: #2e7d32; color: white; font-weight: bold; font-size: 1.1rem; border: none; border-radius: 6px; cursor: pointer; display: block; width: 100%; transition: background 0.3s;">
+            🤖 데이터 임베딩 & 지식베이스 업데이트 전송
+          </button>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    async function submitRag() {
+      const title = document.getElementById('rag-title').value;
+      const content = document.getElementById('rag-content').value;
+
+      if (!title || !content) {
+        alert("⚠️ 제목과 내용을 모두 입력해주세요!");
+        return;
+      }
+
+      try {
+        const res = await fetch('http://localhost:8000/api/v1/admin/rag/upload', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ title: title, content: content })
+        });
+
+        if (res.ok) {
+          const data = await res.json();
+          alert("✅ 성공 메세지: \n" + data.message);
+          document.getElementById('rag-title').value = '';
+          document.getElementById('rag-content').value = '';
+        } else {
+          alert("업로드 중 서버 오류가 발생했습니다.");
+        }
+      } catch (e) {
+        console.error(e);
+        alert("통신 에러가 발생했습니다.");
+      }
+    }
+  </script>
+</body>
+
+</html>

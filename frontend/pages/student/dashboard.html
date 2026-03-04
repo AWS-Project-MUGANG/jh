@@ -27,7 +27,10 @@
             <nav class="sidebar-nav">
                 <button class="nav-item active" id="tab-sugang" onclick="switchTab('sugang')">수강 신청</button>
                 <button class="nav-item" id="tab-timetable" onclick="switchTab('timetable')">시간표</button>
-                <button class="nav-item" onclick="location.href='chat.html'">AI 학사 비서 (RAG)</button>
+                <button class="nav-item" id="tab-grades" onclick="switchTab('grades')">성적 조회</button>
+                <button class="nav-item" id="tab-profile" onclick="switchTab('profile')">정보 수정</button>
+                <button class="nav-item" id="tab-certificate" onclick="switchTab('certificate')">증명서 발급 (PDF)</button>
+                <button class="nav-item" onclick="location.href='chat.html'">AI 학사 비서 (챗봇)</button>
                 <button class="nav-item logout-btn" onclick="location.href='../auth/login.html'">로그아웃</button>
             </nav>
         </aside>
@@ -61,9 +64,36 @@
                         </select>
                     </div>
 
+                    <!-- 공지사항 미리보기 영역 추가 -->
+                    <section class="list-section"
+                        style="margin-bottom: 25px; border-left: 5px solid var(--primary-color); padding-left: 15px;">
+                        <h3>📌 학교 공지사항</h3>
+                        <div id="student-notice-list"
+                            style="max-height: 150px; overflow-y: auto; background: white; padding: 10px; border-radius: 4px;">
+                            <p style="color:#888;">공지사항을 불러오는 중...</p>
+                        </div>
+                    </section>
+
+                    <!-- 수강신청 기간 안내 배너 추가 -->
+                    <div id="enrollment-period-banner"
+                        style="display:none; background: #fff3e0; border: 1px solid #ffe0b2; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+                        <span style="font-weight: bold; color: #e65100;">🚨 수강신청 안내:</span>
+                        <span id="enrollment-period-text" style="margin-left: 10px;"></span>
+                    </div>
+
                     <!-- 장바구니 내역 -->
                     <section class="cart-section">
-                        <h2>장바구니 내역</h2>
+                        <div id="stats-area"
+                            style="margin-bottom:20px; padding:15px; background:#e3f2fd; border-radius:8px; border:1px solid #bbdefb; font-size: 1.1rem;">
+                            <strong>나의 이수 내역 요약: </strong>
+                            총 이수 학점 <span id="stat-total" style="color:#d32f2f; font-weight:bold;">0</span> / <span
+                                id="stat-req">130</span> 학점
+                            &nbsp;&nbsp;|&nbsp;&nbsp;
+                            <strong>평균 평점: </strong> <span id="stat-gpa"
+                                style="color:#2e7d32; font-weight:bold;">0.00</span>
+                        </div>
+
+                        <h2>장바구니 및 수강신청 내역</h2>
                         <div class="table-wrapper">
                             <table class="data-table">
                                 <thead>
@@ -174,6 +204,78 @@
                             </tbody>
                         </table>
                     </div>
+                </div>
+
+                <!-- 증명서 발급 탭 패널 (새로 추가됨) -->
+                <div id="panel-certificate" class="panel" style="display: none;">
+                    <section class="list-section">
+                        <h2>인터넷 제증명 발급 센터</h2>
+                        <div
+                            style="background:white; padding:25px; border-radius:8px; border:1px solid #ddd; margin-top:10px;">
+                            <p style="color:#555; margin-bottom:20px; font-size:1.05rem;">
+                                재학증명서, 성적증명서, 졸업예정증명서 등을 PDF 형식으로 즉시 발급받아 출력할 수 있습니다.<br>
+                                (문서 하단에 워터마크 및 위변조 방지 바코드가 삽입되어 출력됩니다.)
+                            </p>
+                            <div style="display:flex; gap:12px;">
+                                <button class="btn-apply"
+                                    onclick="alert('✅ 재학증명서 PDF가 발급되었습니다.\\n(브라우저 다운로드 폴더를 확인하세요)')"
+                                    style="background-color:#1976d2; padding:12px 18px; font-size:1rem;">재학증명서
+                                    발급</button>
+                                <button class="btn-apply"
+                                    onclick="alert('✅ 성적증명서 PDF가 발급되었습니다.\\n(브라우저 다운로드 폴더를 확인하세요)')"
+                                    style="background-color:#1976d2; padding:12px 18px; font-size:1rem;">성적증명서 (국문)
+                                    발급</button>
+                                <button class="btn-apply"
+                                    onclick="alert('⚠️ 휴학생은 졸업예정증명서를 발급받을 수 없습니다.\\n조건 불일치(졸업학점 미달 혹은 재학 상태 아님)')"
+                                    style="background-color:#757575; padding:12px 18px; font-size:1rem;">졸업예정증명서
+                                    발급</button>
+                            </div>
+                        </div>
+                    </section>
+                </div>
+
+                <!-- 성적 조회 탭 패널 추가 -->
+                <div id="panel-grades" class="panel" style="display: none;">
+                    <section class="list-section">
+                        <h2>이번 학기 성적 리포트</h2>
+                        <div class="table-wrapper">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>과목명</th>
+                                        <th>학점</th>
+                                        <th>점수</th>
+                                        <th>등급</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="student-grade-tbody">
+                                    <!-- JS 동적 렌더링 -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </section>
+                </div>
+
+                <!-- 프로필 수정 탭 패널 추가 -->
+                <div id="panel-profile" class="panel" style="display: none;">
+                    <section class="list-section">
+                        <h2>개인 정보 수정</h2>
+                        <div
+                            style="background:white; padding:25px; border-radius:8px; border:1px solid #ddd; max-width: 500px;">
+                            <div style="margin-bottom:15px;">
+                                <label style="display:block; margin-bottom:5px; font-weight:bold;">이름</label>
+                                <input type="text" id="edit-name"
+                                    style="width:100%; padding:10px; border:1px solid #ccc; border-radius:4px;">
+                            </div>
+                            <div style="margin-bottom:15px;">
+                                <label style="display:block; margin-bottom:5px; font-weight:bold;">학과</label>
+                                <input type="text" id="edit-major"
+                                    style="width:100%; padding:10px; border:1px solid #ccc; border-radius:4px;">
+                            </div>
+                            <button class="btn-approve" onclick="updateProfile()"
+                                style="width:100%; padding:12px; font-size:1.1rem;">정보 수정 완료</button>
+                        </div>
+                    </section>
                 </div>
 
             </div>

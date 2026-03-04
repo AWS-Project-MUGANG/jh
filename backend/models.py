@@ -4,7 +4,7 @@ from sqlalchemy.orm import relationship
 from datetime import datetime
 import uuid
 
-from .database import Base
+from database import Base
 
 class User(Base):
     __tablename__ = "users"
@@ -79,5 +79,37 @@ class Enrollment(Base):
     college = Column(String(100))
     department = Column(String(100))
     room = Column(String(100))
+    status = Column(String(20), default="cart")
+    credits = Column(Integer, default=3)
     created_at = Column(DateTime, default=datetime.utcnow)
+
+    # 성적과의 관계
+    grade = relationship("Grade", back_populates="enrollment", uselist=False)
+
+class Grade(Base):
+    __tablename__ = "grades"
+
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    enrollment_id = Column(String, ForeignKey("enrollments.id"), unique=True)
+    user_id = Column(String, ForeignKey("users.id"))
+    score = Column(Integer) # 0-100
+    grade_letter = Column(String(5)) # A+, B0, etc.
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    enrollment = relationship("Enrollment", back_populates="grade")
+
+class Notice(Base):
+    __tablename__ = "notices"
+
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    title = Column(String(255), nullable=False)
+    content = Column(String, nullable=False)
+    author_id = Column(String, ForeignKey("users.id")) # 관리자 ID
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+class SystemConfig(Base):
+    __tablename__ = "system_configs"
+
+    key = Column(String(100), primary_key=True)
+    value = Column(String(255), nullable=False)
 

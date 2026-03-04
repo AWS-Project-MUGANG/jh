@@ -68,20 +68,81 @@
                     <h2>결재 / 서류 반려함</h2>
                 </div>
             </header>
-            <div class="content-area">
-                <div class="approval-card">
-                    <div>
-                        <div class="doc-title">휴학원 신청 (일반휴학)</div>
-                        <div class="doc-meta">신청자: 임정현 (22517717) | 사유: 경제적 사정 | 신청일: 2024.11.20</div>
-                    </div>
-                    <div class="btn-group">
-                        <button class="btn-approve">서류 승인</button>
-                        <button class="btn-reject">반려 처리</button>
-                    </div>
-                </div>
+            <div class="content-area" id="approval-list">
+                <!-- Data will be dynamically loaded here via script -->
             </div>
         </main>
     </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            await loadForms();
+        });
+
+        async function loadForms() {
+            try {
+                const response = await fetch('http://localhost:8000/api/v1/forms');
+                if (!response.ok) return;
+                const data = await response.json();
+
+                const container = document.getElementById('approval-list');
+                container.innerHTML = '';
+
+                if (data.forms.length === 0) {
+                    container.innerHTML = '<p>현재 대기 중인 결재 서류가 없습니다.</p>';
+                    return;
+                }
+
+                data.forms.forEach(form => {
+                    const dateObj = new Date(form.created_at);
+                    const formattedDate = `${dateObj.getFullYear()}.${String(dateObj.getMonth() + 1).padStart(2, '0')}.${String(dateObj.getDate()).padStart(2, '0')}`;
+
+                    let buttons = '';
+                    if (form.status === 'pending') {
+                        buttons = `
+                            <button class="btn-approve" onclick="updateForm('${form.id}', 'approved')">승인</button>
+                            <button class="btn-reject" onclick="updateForm('${form.id}', 'rejected')">반려</button>
+                        `;
+                    } else if (form.status === 'approved') {
+                        buttons = '<span style="color: green; font-weight: bold;">승인 완료</span>';
+                    } else {
+                        buttons = '<span style="color: red; font-weight: bold;">반려됨</span>';
+                    }
+
+                    const card = document.createElement('div');
+                    card.className = 'approval-card';
+                    card.innerHTML = `
+                        <div>
+                            <div class="doc-title">${form.form_type}</div>
+                            <div class="doc-meta">신청자: ${form.name} (${form.student_id}) | 신청일: ${formattedDate}</div>
+                        </div>
+                        <div class="btn-group">
+                            ${buttons}
+                        </div>
+                    `;
+                    container.appendChild(card);
+                });
+            } catch (err) {
+                console.error('문서 로딩 에러:', err);
+            }
+        }
+
+        async function updateForm(formId, status) {
+            try {
+                const res = await fetch(`http://localhost:8000/api/v1/forms/${formId}/status`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ status: status })
+                });
+                if (res.ok) {
+                    alert('서류 결재 처리가 정상적으로 완료되었습니다.');
+                    loadForms();
+                }
+            } catch (err) {
+                console.error(err);
+            }
+        }
+    </script>
 </body>
 
 </html>
