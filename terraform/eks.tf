@@ -1,9 +1,9 @@
 module "eks" {
   source  = "terraform-aws-modules/eks/aws"
-  version = "~> 19.0"
+  version = "~> 20.0"
 
   cluster_name    = var.cluster_name
-  cluster_version = "1.27"
+  cluster_version = "1.31"
 
   cluster_endpoint_public_access = true
 
@@ -18,7 +18,7 @@ module "eks" {
       max_size     = 3
       desired_size = 2 # 기본 파드 분산을 위한 설정
 
-      instance_types = ["t3.medium"] # 램 4GB급 웹서비스용 인스턴스
+      instance_types = ["t3.small"] # EKS 실행 가능한 최소 사양 (2GB RAM)
       capacity_type  = "ON_DEMAND"
     }
   }

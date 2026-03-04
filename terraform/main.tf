@@ -50,12 +50,8 @@ resource "aws_route_table_association" "public_assoc" {
 }
 
 # 3. 보안 그룹 (Security Groups)
-# 현재 Terraform을 실행하는 PC의 공인 IP를 동적으로 조회
-data "http" "my_ip" {
-  url = "http://ifconfig.me/ip"
-}
 
-# Bastion SG: 내 IP에서만 SSH(22) 허용
+# Bastion SG: 모든 IP에서 SSH(22) 허용
 resource "aws_security_group" "bastion_sg" {
   name   = "bastion-sg"
   vpc_id = aws_vpc.mugang_vpc.id
@@ -64,7 +60,7 @@ resource "aws_security_group" "bastion_sg" {
     from_port   = 22
     to_port     = 22
     protocol    = "tcp"
-    cidr_blocks = ["${chomp(data.http.my_ip.response_body)}/32"] # 현재 내 IP를 동적으로 설정
+    cidr_blocks = ["0.0.0.0/0"]
   }
 
   egress {
