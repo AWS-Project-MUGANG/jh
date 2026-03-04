@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, Integer, BigInteger, DateTime, ForeignKey, JSON, Time, Enum as SAEnum
+from sqlalchemy import Column, String, Integer, BigInteger, DateTime, ForeignKey, JSON, Time, Enum as SAEnum, Boolean
 from sqlalchemy.orm import relationship
 from datetime import datetime
 import uuid
@@ -150,4 +150,17 @@ class SystemConfig(Base):
 
     key = Column(String(100), primary_key=True)
     value = Column(String(255), nullable=False)
+
+
+class EnrollmentSchedule(Base):
+    """수강신청 일차별 기간 및 제한 설정"""
+    __tablename__ = "enrollment_schedule"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    day_number = Column(Integer, nullable=False)          # 1, 2, 3
+    open_datetime = Column(DateTime, nullable=False)      # 오픈 일시 (UTC)
+    close_datetime = Column(DateTime, nullable=False)     # 마감 일시 (UTC)
+    restriction_type = Column(String(30), nullable=False) # 'own_grade_dept' | 'own_college' | 'all'
+    is_active = Column(Boolean, default=True)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 

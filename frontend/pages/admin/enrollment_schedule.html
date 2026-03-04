@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>수강신청 기간 설정 - 무강대학교</title>
+    <link rel="stylesheet" href="../../css/main.css">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        .day-card {
+            background: white;
+            border-radius: 8px;
+            padding: 24px;
+            margin-bottom: 16px;
+            border: 1px solid #e0e0e0;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+        }
+        .day-card.day-1 { border-left: 5px solid #1976d2; }
+        .day-card.day-2 { border-left: 5px solid #388e3c; }
+        .day-card.day-3 { border-left: 5px solid #f57c00; }
+
+        .day-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        .day-header h3 { margin: 0; font-size: 1.1rem; color: #1a237e; }
+
+        .restriction-badge {
+            padding: 4px 14px;
+            border-radius: 20px;
+            font-size: 0.78rem;
+            font-weight: 600;
+        }
+        .badge-blue  { background: #e3f2fd; color: #1565c0; }
+        .badge-green { background: #e8f5e9; color: #2e7d32; }
+        .badge-orange{ background: #fff3e0; color: #e65100; }
+
+        .toggle-row { display: flex; align-items: center; gap: 8px; margin-left: auto; }
+        .toggle-row span { font-size: 0.85rem; color: #666; }
+
+        .toggle-switch { position: relative; width: 48px; height: 26px; }
+        .toggle-switch input { display: none; }
+        .toggle-slider {
+            position: absolute; cursor: pointer;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: #ccc; border-radius: 26px; transition: .3s;
+        }
+        .toggle-slider:before {
+            content: ""; position: absolute;
+            height: 20px; width: 20px; left: 3px; bottom: 3px;
+            background: white; border-radius: 50%; transition: .3s;
+        }
+        .toggle-switch input:checked + .toggle-slider { background: #1976d2; }
+        .toggle-switch input:checked + .toggle-slider:before { transform: translateX(22px); }
+
+        .datetime-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+            margin-bottom: 16px;
+        }
+        .datetime-grid label {
+            display: block; font-size: 0.85rem; color: #555; margin-bottom: 6px;
+        }
+        .datetime-grid input {
+            width: 100%; padding: 10px;
+            border: 1px solid #ddd; border-radius: 6px;
+            font-size: 0.95rem; box-sizing: border-box;
+            font-family: 'Noto Sans KR', sans-serif;
+        }
+        .datetime-grid input:focus { outline: none; border-color: #1976d2; }
+
+        .info-box {
+            font-size: 0.82rem; color: #888;
+            background: #f8f8f8; padding: 10px 14px;
+            border-radius: 6px;
+        }
+
+        .status-banner {
+            padding: 14px 20px; border-radius: 8px;
+            margin-bottom: 24px; font-weight: 500;
+            display: flex; align-items: center; gap: 10px;
+        }
+        .status-active   { background: #e8f5e9; color: #2e7d32; border: 1px solid #a5d6a7; }
+        .status-upcoming { background: #e3f2fd; color: #1565c0; border: 1px solid #90caf9; }
+        .status-inactive { background: #fff3e0; color: #e65100; border: 1px solid #ffcc80; }
+
+        .save-btn {
+            width: 100%; padding: 14px;
+            background: #1a237e; color: white;
+            border: none; border-radius: 8px;
+            font-size: 1.05rem; font-weight: 700; cursor: pointer;
+            font-family: 'Noto Sans KR', sans-serif; margin-top: 8px;
+            transition: background .2s;
+        }
+        .save-btn:hover { background: #283593; }
+
+        .schedule-table { width: 100%; border-collapse: collapse; margin-top: 16px; }
+        .schedule-table th, .schedule-table td {
+            padding: 10px 14px; border-bottom: 1px solid #e0e0e0;
+            text-align: left; font-size: 0.88rem;
+        }
+        .schedule-table th { background: #f5f5f5; font-weight: 600; color: #444; }
+
+        .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 5px; }
+        .dot-active   { background: #43a047; }
+        .dot-inactive { background: #bdbdbd; }
+        .dot-future   { background: #1976d2; }
+        .dot-ended    { background: #ef5350; }
+    </style>
+</head>
+<body>
+<div class="app-container">
+
+    <!-- ===== Sidebar ===== -->
+    <aside class="sidebar">
+        <div class="sidebar-header" style="background-color: #37474f;">
+            <div class="student-info">
+                <span class="name" id="staff-name">관리자</span>
+                <span class="id" id="staff-id">Staff</span>
+            </div>
+            <div class="department-info">
+                <p>교무처</p>
+                <p class="sub-dept">수강신청 관리</p>
+            </div>
+        </div>
+        <nav class="sidebar-nav">
+            <button class="nav-item" onclick="location.href='dashboard.html'">대시보드 홈</button>
+            <button class="nav-item" onclick="location.href='approvals.html'">결재 / 서류 반려함</button>
+            <button class="nav-item active" id="tab-schedule">수강신청 기간 설정</button>
+            <button class="nav-item" onclick="location.href='rag_update.html'">학사 규정 AI 업데이트</button>
+            <button class="nav-item logout-btn" onclick="logout()">로그아웃</button>
+        </nav>
+    </aside>
+
+    <!-- ===== Main Content ===== -->
+    <main class="main-content">
+        <header class="top-header">
+            <div class="logo-area">
+                <h1>무강대학교 - 관리자 센터</h1>
+                <span class="logo-sub">수강신청 기간 · 일차별 제한 설정</span>
+            </div>
+        </header>
+
+        <div class="content-area">
+
+            <!-- 현재 상태 배너 -->
+            <div id="status-banner" class="status-banner status-inactive">
+                <span id="status-icon">⏳</span>
+                <span id="status-text">수강신청 일정을 불러오는 중...</span>
+            </div>
+
+            <!-- 1일차 -->
+            <div class="day-card day-1">
+                <div class="day-header">
+                    <h3>📅 1일차 수강신청</h3>
+                    <span class="restriction-badge badge-blue">본인학년 · 본인단과대 · 본인학과 전용</span>
+                    <div class="toggle-row">
+                        <span>활성화</span>
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="day1-active" checked>
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                </div>
+                <div class="datetime-grid">
+                    <div>
+                        <label>🔓 오픈 날짜 / 시간</label>
+                        <input type="datetime-local" id="day1-open">
+                    </div>
+                    <div>
+                        <label>🔒 마감 날짜 / 시간</label>
+                        <input type="datetime-local" id="day1-close">
+                    </div>
+                </div>
+                <div class="info-box">
+                    ℹ️ <strong>제한:</strong>
+                    학생 본인의 <strong>학년 · 단과대학 · 학과</strong>에 해당하는 강의만 수강신청 가능합니다.
+                    (예: 컴퓨터공학과 3학년 학생 → 컴퓨터공학과 3학년 개설 과목만 신청 가능)
+                </div>
+            </div>
+
+            <!-- 2일차 -->
+            <div class="day-card day-2">
+                <div class="day-header">
+                    <h3>📅 2일차 수강신청</h3>
+                    <span class="restriction-badge badge-green">본인단과대 · 타학과 허용</span>
+                    <div class="toggle-row">
+                        <span>활성화</span>
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="day2-active" checked>
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                </div>
+                <div class="datetime-grid">
+                    <div>
+                        <label>🔓 오픈 날짜 / 시간</label>
+                        <input type="datetime-local" id="day2-open">
+                    </div>
+                    <div>
+                        <label>🔒 마감 날짜 / 시간</label>
+                        <input type="datetime-local" id="day2-close">
+                    </div>
+                </div>
+                <div class="info-box">
+                    ℹ️ <strong>제한:</strong>
+                    본인 <strong>단과대학 내 타 학과</strong> 강의까지 수강신청 가능합니다.
+                    (예: 공과대학 소속 학생 → 공과대학 전체 학과 강의 신청 가능)
+                </div>
+            </div>
+
+            <!-- 3일차 -->
+            <div class="day-card day-3">
+                <div class="day-header">
+                    <h3>📅 3일차 수강신청</h3>
+                    <span class="restriction-badge badge-orange">학교 전체 수강 가능</span>
+                    <div class="toggle-row">
+                        <span>활성화</span>
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="day3-active" checked>
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                </div>
+                <div class="datetime-grid">
+                    <div>
+                        <label>🔓 오픈 날짜 / 시간</label>
+                        <input type="datetime-local" id="day3-open">
+                    </div>
+                    <div>
+                        <label>🔒 마감 날짜 / 시간</label>
+                        <input type="datetime-local" id="day3-close">
+                    </div>
+                </div>
+                <div class="info-box">
+                    ℹ️ <strong>제한 없음:</strong>
+                    단과대학·학과에 관계없이 <strong>학교 전체 강의</strong>를 수강신청할 수 있습니다.
+                </div>
+            </div>
+
+            <!-- 저장 버튼 -->
+            <button class="save-btn" onclick="saveSchedule()">💾 전체 일정 저장</button>
+
+            <!-- 현재 저장된 일정 요약 테이블 -->
+            <div class="list-section" style="margin-top: 28px; background: white; padding: 20px; border-radius: 8px; border: 1px solid #e0e0e0;">
+                <h3>📋 저장된 수강신청 일정 요약</h3>
+                <table class="schedule-table">
+                    <thead>
+                        <tr>
+                            <th>일차</th>
+                            <th>제한 유형</th>
+                            <th>오픈 시간</th>
+                            <th>마감 시간</th>
+                            <th>현재 상태</th>
+                        </tr>
+                    </thead>
+                    <tbody id="schedule-tbody">
+                        <tr>
+                            <td colspan="5" style="text-align:center;color:#aaa;padding:20px;">
+                                저장된 일정 없음
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+        </div><!-- /content-area -->
+    </main>
+</div>
+
+<script>
+const API_BASE = '';
+
+const RESTRICTION_LABELS = {
+    'own_grade_dept': '본인학년 · 본인단과대 · 본인학과',
+    'own_college':    '본인단과대 · 타학과 허용',
+    'all':            '학교 전체'
+};
+
+// ---- 인증 확인 ----
+const role = localStorage.getItem('role');
+const userId = localStorage.getItem('user_id');
+if (!userId || (role !== 'staff' && role !== 'admin')) {
+    alert('관리자(staff) 권한이 필요합니다.');
+    location.href = '../auth/login.html';
+}
+const storedName = localStorage.getItem('name');
+if (storedName) document.getElementById('staff-name').textContent = storedName;
+
+function logout() {
+    localStorage.clear();
+    location.href = '../auth/login.html';
+}
+
+// ---- 시간 변환 유틸 ----
+function utcToLocalInput(utcStr) {
+    if (!utcStr) return '';
+    const dt = new Date(utcStr);
+    const offset = dt.getTimezoneOffset() * 60000;
+    return new Date(dt.getTime() - offset).toISOString().slice(0, 16);
+}
+
+function localInputToUTC(localStr) {
+    if (!localStr) return null;
+    return new Date(localStr).toISOString();
+}
+
+function formatKST(utcStr) {
+    if (!utcStr) return '-';
+    return new Date(utcStr).toLocaleString('ko-KR', {
+        year: 'numeric', month: '2-digit', day: '2-digit',
+        hour: '2-digit', minute: '2-digit', hour12: false
+    });
+}
+
+function getStatusCell(openStr, closeStr, isActive) {
+    if (!isActive) {
+        return `<span class="dot dot-inactive"></span>비활성`;
+    }
+    const now = new Date();
+    const open  = new Date(openStr);
+    const close = new Date(closeStr);
+    if (now >= open && now <= close) return `<span class="dot dot-active"></span>진행 중`;
+    if (now < open)  return `<span class="dot dot-future"></span>예정`;
+    return `<span class="dot dot-ended"></span>종료`;
+}
+
+// ---- 일정 로드 ----
+async function loadSchedule() {
+    try {
+        const res  = await fetch(`${API_BASE}/api/v1/admin/enrollment-schedule`);
+        const data = await res.json();
+        const schedules = data.schedules || [];
+
+        // 폼 채우기
+        schedules.forEach(s => {
+            const n = s.day_number;
+            const openEl   = document.getElementById(`day${n}-open`);
+            const closeEl  = document.getElementById(`day${n}-close`);
+            const activeEl = document.getElementById(`day${n}-active`);
+            if (openEl)   openEl.value   = utcToLocalInput(s.open_datetime);
+            if (closeEl)  closeEl.value  = utcToLocalInput(s.close_datetime);
+            if (activeEl) activeEl.checked = s.is_active;
+        });
+
+        updateStatusBanner(schedules);
+        renderTable(schedules);
+    } catch (e) {
+        console.error('일정 로드 오류:', e);
+        document.getElementById('status-text').textContent = '서버 연결 오류로 일정을 불러오지 못했습니다.';
+    }
+}
+
+function updateStatusBanner(schedules) {
+    const banner = document.getElementById('status-banner');
+    const text   = document.getElementById('status-text');
+    const now    = new Date();
+
+    const active = schedules.find(s => {
+        if (!s.is_active) return false;
+        return new Date(s.open_datetime) <= now && now <= new Date(s.close_datetime);
+    });
+
+    if (active) {
+        banner.className = 'status-banner status-active';
+        text.textContent = `✅ 현재 ${active.day_number}일차 수강신청 진행 중 | 마감: ${formatKST(active.close_datetime)}`;
+        return;
+    }
+
+    const next = schedules
+        .filter(s => s.is_active && new Date(s.open_datetime) > now)
+        .sort((a, b) => new Date(a.open_datetime) - new Date(b.open_datetime))[0];
+
+    if (next) {
+        banner.className = 'status-banner status-upcoming';
+        text.textContent = `⏰ 다음 수강신청: ${next.day_number}일차 | 오픈: ${formatKST(next.open_datetime)}`;
+    } else {
+        banner.className = 'status-banner status-inactive';
+        text.textContent = '⏳ 현재 수강신청 비활성 상태입니다. 일정을 설정해 주세요.';
+    }
+}
+
+function renderTable(schedules) {
+    const tbody = document.getElementById('schedule-tbody');
+    if (!schedules.length) {
+        tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;color:#aaa;padding:20px;">저장된 일정 없음</td></tr>`;
+        return;
+    }
+    tbody.innerHTML = schedules.map(s => `
+        <tr>
+            <td><strong>${s.day_number}일차</strong></td>
+            <td>${RESTRICTION_LABELS[s.restriction_type] || s.restriction_type}</td>
+            <td>${formatKST(s.open_datetime)}</td>
+            <td>${formatKST(s.close_datetime)}</td>
+            <td>${getStatusCell(s.open_datetime, s.close_datetime, s.is_active)}</td>
+        </tr>
+    `).join('');
+}
+
+// ---- 저장 ----
+async function saveSchedule() {
+    const DAY_RESTRICTIONS = {
+        1: 'own_grade_dept',
+        2: 'own_college',
+        3: 'all'
+    };
+
+    // 유효성 검사
+    for (let n = 1; n <= 3; n++) {
+        const open  = document.getElementById(`day${n}-open`).value;
+        const close = document.getElementById(`day${n}-close`).value;
+        if (!open || !close) {
+            alert(`${n}일차의 오픈/마감 날짜·시간을 모두 입력해 주세요.`);
+            return;
+        }
+        if (new Date(open) >= new Date(close)) {
+            alert(`${n}일차: 마감 시간이 오픈 시간보다 늦어야 합니다.`);
+            return;
+        }
+    }
+
+    const schedules = [1, 2, 3].map(n => ({
+        day_number:       n,
+        open_datetime:    localInputToUTC(document.getElementById(`day${n}-open`).value),
+        close_datetime:   localInputToUTC(document.getElementById(`day${n}-close`).value),
+        restriction_type: DAY_RESTRICTIONS[n],
+        is_active:        document.getElementById(`day${n}-active`).checked
+    }));
+
+    try {
+        const res = await fetch(`${API_BASE}/api/v1/admin/enrollment-schedule`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ schedules })
+        });
+        const data = await res.json();
+        if (res.ok) {
+            alert('✅ 수강신청 일정이 저장되었습니다.');
+            loadSchedule();
+        } else {
+            alert('저장 실패: ' + (data.detail || JSON.stringify(data)));
+        }
+    } catch (e) {
+        alert('서버 연결 오류: ' + e.message);
+    }
+}
+
+// ---- 초기화 ----
+loadSchedule();
+setInterval(updateStatusBanner.bind(null, []), 60000); // 1분마다 상태 갱신
+</script>
+</body>
+</html>

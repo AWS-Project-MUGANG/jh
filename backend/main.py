@@ -4,7 +4,7 @@ from fastapi import FastAPI, Depends, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
-from typing import Optional
+from typing import Optional, List
 from sqlalchemy.orm import Session
 from passlib.context import CryptContext
 from jose import jwt
@@ -107,9 +107,19 @@ class EnrollmentRequest(BaseModel):
     user_id: str
     lecture_id: int  # lecture_tb.lecture_id 참조
 
+class EnrollmentScheduleDayRequest(BaseModel):
+    day_number: int
+    open_datetime: str   # UTC ISO string
+    close_datetime: str  # UTC ISO string
+    restriction_type: str  # 'own_grade_dept' | 'own_college' | 'all'
+    is_active: bool = True
+
+class EnrollmentScheduleBulkRequest(BaseModel):
+    schedules: List[EnrollmentScheduleDayRequest]
+
 # ---- 헬퍼 함수 ----
 def is_enrollment_period_active(db: Session):
-    """현재 시각이 수강신청 가능 기간인지 확인"""
+    """현재 시각이 수강신청 가능 기간인지 확인 (구 SystemConfig 방식)"""
     start_config = db.query(models.SystemConfig).filter(models.SystemConfig.key == "enrollment_start").first()
     end_config = db.query(models.SystemConfig).filter(models.SystemConfig.key == "enrollment_end").first()
 
@@ -124,6 +134,74 @@ def is_enrollment_period_active(db: Session):
     except Exception as e:
         print(f"Period check error: {e}")
         return True
+
+
+def _get_active_schedule(db: Session):
+    """현재 시각에 해당하는 EnrollmentSchedule 반환 (없으면 None)"""
+    now = datetime.utcnow()
+    schedules = db.query(models.EnrollmentSchedule).filter(
+        models.EnrollmentSchedule.is_active == True
+    ).order_by(models.EnrollmentSchedule.day_number).all()
+    for s in schedules:
+        if s.open_datetime <= now <= s.close_datetime:
+            return s
+    return None
+
+
+def _check_enrollment_access(user: models.User, lecture_id: int, db: Session) -> dict:
+    """학생이 해당 강의를 신청할 수 있는지 일정·제한 검사"""
+    if user.role == 'staff':
+        return {"allowed": True, "reason": "관리자 계정", "active_day": None}
+
+    schedules_exist = db.query(models.EnrollmentSchedule).filter(
+        models.EnrollmentSchedule.is_active == True
+    ).first()
+
+    if not schedules_exist:
+        # 새 스케줄 미설정 시 기존 SystemConfig 방식 사용
+        if not is_enrollment_period_active(db):
+            return {"allowed": False, "reason": "현재는 수강신청 기간이 아닙니다."}
+        return {"allowed": True, "reason": "기간 내", "active_day": None}
+
+    active = _get_active_schedule(db)
+    if not active:
+        return {"allowed": False, "reason": "현재 수강신청 기간이 아닙니다.", "active_day": None}
+
+    if active.restriction_type == 'all':
+        return {"allowed": True, "reason": "전체 수강신청 기간", "active_day": active.day_number}
+
+    lecture = db.query(models.Lecture).filter(models.Lecture.lecture_id == lecture_id).first()
+    if not lecture:
+        return {"allowed": False, "reason": "강의 정보를 찾을 수 없습니다."}
+
+    # 단과대학 조회
+    user_dept = db.query(models.Depart).filter(models.Depart.depart == user.major).first()
+    user_college = user_dept.college if user_dept else None
+    lec_dept = db.query(models.Depart).filter(models.Depart.depart == lecture.department).first()
+    lec_college = lec_dept.college if lec_dept else None
+
+    if active.restriction_type == 'own_college':
+        if user_college and lec_college and user_college == lec_college:
+            return {"allowed": True, "reason": "단과대학 일치", "active_day": active.day_number}
+        return {"allowed": False,
+                "reason": f"2일차는 본인 단과대학({user_college or '미확인'}) 강의만 신청 가능합니다.",
+                "active_day": active.day_number}
+
+    if active.restriction_type == 'own_grade_dept':
+        if user.major != lecture.department:
+            return {"allowed": False,
+                    "reason": f"1일차는 본인 학과({user.major}) 강의만 신청 가능합니다.",
+                    "active_day": active.day_number}
+        if user_college and lec_college and user_college != lec_college:
+            return {"allowed": False, "reason": "1일차는 본인 단과대학 강의만 신청 가능합니다.",
+                    "active_day": active.day_number}
+        if lecture.lec_grade and user.grade and str(user.grade) != str(lecture.lec_grade):
+            return {"allowed": False,
+                    "reason": f"1일차는 본인 학년({user.grade}학년) 강의만 신청 가능합니다.",
+                    "active_day": active.day_number}
+        return {"allowed": True, "reason": "학과/학년 일치", "active_day": active.day_number}
+
+    return {"allowed": True, "reason": "허용", "active_day": active.day_number}
 
 
 # ---- API 라우터 ----
@@ -169,6 +247,20 @@ def login(req: LoginRequest, db: Session = Depends(get_db)):
         raise HTTPException(status_code=401, detail="존재하지 않는 학번입니다.")
     if not verify_password(req.password, user.password_hash):
         raise HTTPException(status_code=401, detail="비밀번호가 올바르지 않습니다.")
+
+    # 학생은 수강신청 운영 시간에만 로그인 허용
+    if user.role == 'student':
+        schedules = db.query(models.EnrollmentSchedule).filter(
+            models.EnrollmentSchedule.is_active == True
+        ).all()
+        if schedules:  # 스케줄이 설정된 경우에만 제한 적용
+            now = datetime.utcnow()
+            in_period = any(s.open_datetime <= now <= s.close_datetime for s in schedules)
+            if not in_period:
+                raise HTTPException(
+                    status_code=403,
+                    detail="현재 수강신청 운영 시간이 아닙니다. 운영 시간에만 접속 가능합니다."
+                )
 
     access_token = create_access_token(data={"sub": user.student_id, "id": user.id})
 
@@ -240,13 +332,14 @@ def get_user_enrollments(user_id: str, db: Session = Depends(get_db)):
 
 @app.post("/api/v1/enrollments")
 def create_enrollment(req: EnrollmentRequest, db: Session = Depends(get_db)):
-    """수강신청 1건 저장 (정원 체크 + 낙관적 락)"""
-    if not is_enrollment_period_active(db):
-        raise HTTPException(status_code=403, detail="현재는 수강신청 기간이 아닙니다.")
-
+    """수강신청 1건 저장 (정원 체크 + 낙관적 락 + 일차별 제한 검사)"""
     user = db.query(models.User).filter(models.User.id == req.user_id).first()
     if not user:
         raise HTTPException(status_code=404, detail="사용자 정보를 찾을 수 없습니다.")
+
+    access = _check_enrollment_access(user, req.lecture_id, db)
+    if not access["allowed"]:
+        raise HTTPException(status_code=403, detail=access["reason"])
 
     # 중복 수강신청 검사
     existing = db.query(models.Enrollment).filter(
@@ -540,7 +633,69 @@ def update_user_profile(user_id: str, req: UserUpdateRequest, db: Session = Depe
     return {"message": "프로필 정보가 수정되었습니다."}
 
 
-# --- 수강신청 기간 설정 ---
+# --- 수강신청 일차별 스케줄 설정 (신규) ---
+
+@app.get("/api/v1/admin/enrollment-schedule")
+def get_enrollment_schedule(db: Session = Depends(get_db)):
+    """관리자용: 수강신청 일차별 기간·제한 조회"""
+    schedules = db.query(models.EnrollmentSchedule).order_by(
+        models.EnrollmentSchedule.day_number
+    ).all()
+    return {"schedules": [
+        {
+            "id": s.id,
+            "day_number": s.day_number,
+            "open_datetime": s.open_datetime.isoformat() + "Z",
+            "close_datetime": s.close_datetime.isoformat() + "Z",
+            "restriction_type": s.restriction_type,
+            "is_active": s.is_active,
+            "updated_at": s.updated_at.isoformat() if s.updated_at else None,
+        } for s in schedules
+    ]}
+
+
+@app.post("/api/v1/admin/enrollment-schedule")
+def save_enrollment_schedule(req: EnrollmentScheduleBulkRequest, db: Session = Depends(get_db)):
+    """관리자용: 수강신청 일차별 기간·제한 저장 (upsert)"""
+    for day_req in req.schedules:
+        try:
+            open_dt = datetime.fromisoformat(day_req.open_datetime.replace("Z", ""))
+            close_dt = datetime.fromisoformat(day_req.close_datetime.replace("Z", ""))
+        except ValueError as e:
+            raise HTTPException(status_code=400, detail=f"날짜 형식 오류: {e}")
+
+        existing = db.query(models.EnrollmentSchedule).filter(
+            models.EnrollmentSchedule.day_number == day_req.day_number
+        ).first()
+        if existing:
+            existing.open_datetime = open_dt
+            existing.close_datetime = close_dt
+            existing.restriction_type = day_req.restriction_type
+            existing.is_active = day_req.is_active
+            existing.updated_at = datetime.utcnow()
+        else:
+            db.add(models.EnrollmentSchedule(
+                day_number=day_req.day_number,
+                open_datetime=open_dt,
+                close_datetime=close_dt,
+                restriction_type=day_req.restriction_type,
+                is_active=day_req.is_active,
+            ))
+    db.commit()
+    return {"message": "수강신청 일정이 저장되었습니다."}
+
+
+@app.get("/api/v1/enrollment/access-check")
+def enrollment_access_check(user_id: str, lecture_id: Optional[int] = None, db: Session = Depends(get_db)):
+    """학생용: 현재 수강신청 가능 여부 및 활성 일차 반환"""
+    user = db.query(models.User).filter(models.User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="사용자를 찾을 수 없습니다.")
+    result = _check_enrollment_access(user, lecture_id, db)
+    return result
+
+
+# --- 수강신청 기간 설정 (구 SystemConfig 방식) ---
 @app.get("/api/v1/admin/config/enrollment-period")
 def get_enrollment_period(db: Session = Depends(get_db)):
     start = db.query(models.SystemConfig).filter(models.SystemConfig.key == "enrollment_start").first()
