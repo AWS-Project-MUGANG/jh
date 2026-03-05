@@ -17,6 +17,9 @@ from sqlalchemy.pool import StaticPool
 import uuid
 import csv
 import io
+import pdfplumber
+import re
+import tempfile
 
 # DB 연동
 from database import engine, get_db, Base
@@ -659,6 +662,79 @@ async def upload_courses_batch(file: UploadFile = File(...), db: Session = Depen
     db.commit()
     
     return {"message": f"성공적으로 {len(lectures_to_insert)}개의 강의가 일괄 개설되었습니다."}
+
+@app.post("/api/v1/admin/courses/upload-pdf")
+async def upload_courses_pdf(file: UploadFile = File(...), db: Session = Depends(get_db)):
+    """PDF 강의계획서 자동 파싱 및 DB 적재 API (pdfplumber)"""
+    if not file.filename.endswith(".pdf"):
+        raise HTTPException(status_code=400, detail="PDF 파일만 업로드 가능합니다.")
+        
+    # 임시 파일 저장
+    with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp:
+        tmp.write(await file.read())
+        tmp_path = tmp.name
+        
+    def to_mins(t_str):
+        h, m = map(int, t_str.split(':'))
+        return h * 60 + m
+
+    time_re = re.compile(r'([월화수목금토])\((\d{2}:\d{2})-(\d{2}:\d{2})\)')
+    
+    try:
+        # PDF 파싱 (changepdftocsv.py 원본 로직 이식)
+        with pdfplumber.open(tmp_path) as pdf:
+            for page in pdf.pages:
+                table = page.extract_table()
+                if not table: continue
+                
+                for row in table[1:]:
+                    try:
+                        c_no = row[3].strip()
+                        raw_time = row[8] if row[8] else ""
+                        
+                        # 중복 여부 체크 (동일 학수번호)
+                        existing_lecture = db.query(models.Lecture).filter(models.Lecture.course_no == c_no).first()
+                        if existing_lecture:
+                            continue
+                        
+                        # lecture_tb 데이터 생성
+                        lecture = models.Lecture(
+                            course_no=c_no,
+                            subject=row[4].replace('\n', ''),
+                            department=row[2].replace('\n', ''),
+                            lec_grade=row[1],
+                            credit=int(row[5]) if row[5].isdigit() else 3,
+                            professor=row[7].replace('\n', '') if row[7] else "미지정",
+                            classroom=row[9].replace('\n', '') if row[9] else "미지정",
+                            type=row[0][:2],
+                            capacity=40,
+                            version=0
+                        )
+                        db.add(lecture)
+                        db.flush() # ID 획득을 위해 flush
+                        
+                        # schedule_tb 데이터 분리 및 저장
+                        matches = time_re.findall(raw_time)
+                        for day, start, end in matches:
+                            schedule = models.ScheduleTb(
+                                lecture_id=lecture.lecture_id,
+                                day_of_week=day,
+                                start_min=to_mins(start),
+                                end_min=to_mins(end),
+                                start_time=start + ":00",
+                                end_time=end + ":00"
+                            )
+                            db.add(schedule)
+                    except Exception:
+                        continue
+        db.commit()
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"PDF 파싱 중 서버 에러: {str(e)}")
+    finally:
+        os.remove(tmp_path)
+        
+    return {"message": "PDF 강의 계획서 파싱 및 DB 정보 등록이 성공적으로 완료되었습니다."}
 
 
 class AIRecommendRequest(BaseModel):
