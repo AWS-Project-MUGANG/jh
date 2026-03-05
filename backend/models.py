@@ -41,15 +41,18 @@ class Lecture(Base):
     course_no = Column(String(20), unique=True)
     subject = Column(String(200), nullable=False)
     department = Column(String(100))
+    dept_no = Column(BigInteger, ForeignKey("depart_tb.dept_no"), nullable=True)
     lec_grade = Column(String(10))
     credit = Column(Integer)
     professor = Column(String(50))
     classroom = Column(String(100))
-    type = Column(SAEnum('전공필수', '전공선택', '교양필수', '교양선택', name='lecture_category'))
+    type = Column(SAEnum('전공필수', '전공선택', '교양필수', '교양선택', '교직', '공통', name='lecture_category'))
     capacity = Column(Integer, default=0)
     count = Column(Integer, default=0)
     waitlist_capacity = Column(Integer, default=10) # 큐 정원
     version = Column(Integer, default=0)
+
+    depart = relationship("Depart")
 
     schedules = relationship("ScheduleTb", back_populates="lecture", cascade="all, delete-orphan")
     enrollments = relationship("Enrollment", back_populates="lecture")
@@ -65,6 +68,7 @@ class ScheduleTb(Base):
     end_min = Column(Integer)
     start_time = Column(Time)
     end_time = Column(Time)
+    classroom = Column(String(100))
 
     lecture = relationship("Lecture", back_populates="schedules")
 
