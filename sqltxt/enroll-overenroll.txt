@@ -1,0 +1,32 @@
+CREATE TYPE enroll_status_enum AS ENUM ('COMPLETED', 'CANCELED', 'BASKET');
+
+
+CREATE TABLE enroll_tb (
+    enroll_no BIGSERIAL PRIMARY KEY,                -- 자동 증가 고유 번호
+    loginid BIGINT NOT NULL,                        -- user_tb 참조 (FK, UK)
+    lecture_id BIGINT NOT NULL,                     -- course_tb 참조 (FK, UK)
+    sche_no BIGINT NOT NULL,                        -- schedule_tb 참조 (FK)
+    enroll_status enroll_status_enum NOT NULL,      -- 수강 상태 (ENUM)
+    createdat TIMESTAMP DEFAULT CURRENT_TIMESTAMP,  -- 생성 일자
+
+    -- 제약 조건 설정 (복합 유니크 등 비즈니스 로직에 따라 조정 가능)
+    CONSTRAINT uk_enroll_user_lecture UNIQUE (loginid, lecture_id)
+    -- FOREIGN KEY (loginid) REFERENCES user_tb(loginid), -- 실제 운영 시 참조 테이블 확인 필요
+    -- FOREIGN KEY (lecture_id) REFERENCES course_tb(courseno),
+    -- FOREIGN KEY (sche_no) REFERENCES schedule_tb(sche_no)
+);
+
+CREATE TABLE overenroll_tb (
+    over_no BIGSERIAL PRIMARY KEY,                  -- 자동 증가 고유 번호
+    user_no BIGINT NOT NULL,                        -- 서류 제출 학생 (FK, UK)
+    lecture_id BIGINT NOT NULL,                     -- 신청 강의 번호 (FK, UK)
+    sche_no BIGINT NOT NULL,                        -- 승인 교직원 번호 (FK)
+    reason VARCHAR(255),                            -- 사유 (NULL 허용)
+    loginid VARCHAR(50) NOT NULL,                   -- 로그인 ID (user_tb)
+
+    -- 제약 조건 설정
+    CONSTRAINT uk_overenroll_user_lecture UNIQUE (user_no, lecture_id)
+    -- FOREIGN KEY (user_no) REFERENCES user_tb(user_no),
+    -- FOREIGN KEY (lecture_id) REFERENCES course_tb(courseno),
+    -- FOREIGN KEY (sche_no) REFERENCES schedule_tb(sche_no)
+);
