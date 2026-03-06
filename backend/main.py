@@ -1205,6 +1205,123 @@ def set_enrollment_period(req: EnrollmentPeriodRequest, db: Session = Depends(ge
     db.commit()
     return {"message": "수강신청 기간이 설정되었습니다."}
 
+# --- 서버 시간 API ---
+
+@app.get("/api/time")
+def get_server_time(db: Session = Depends(get_db)):
+    """외부 서버 시간 확인 사이트(네이비즘 등)가 참조하는 서버 시간 엔드포인트.
+    SystemConfig에 저장된 오프셋(ms)을 적용한 UTC 기준 Unix 타임스탬프(ms) 반환."""
+    offset_cfg = db.query(models.SystemConfig).filter(models.SystemConfig.key == "server_time_offset_ms").first()
+    offset_ms = int(offset_cfg.value) if offset_cfg else 0
+    now_ms = int(datetime.now(timezone.utc).timestamp() * 1000) + offset_ms
+    return {"timestamp_ms": now_ms, "offset_ms": offset_ms}
+
+
+@app.get("/api/v1/admin/server-time")
+def get_server_time_config(db: Session = Depends(get_db)):
+    """관리자용: 현재 서버 시간 + 오프셋 설정 조회"""
+    offset_cfg = db.query(models.SystemConfig).filter(models.SystemConfig.key == "server_time_offset_ms").first()
+    offset_ms = int(offset_cfg.value) if offset_cfg else 0
+    now_ms = int(datetime.now(timezone.utc).timestamp() * 1000) + offset_ms
+    return {"timestamp_ms": now_ms, "offset_ms": offset_ms}
+
+
+class ServerTimeOffsetRequest(BaseModel):
+    offset_ms: int  # 조정할 오프셋 (밀리초, 음수 가능)
+
+
+@app.post("/api/v1/admin/server-time-offset")
+def set_server_time_offset(req: ServerTimeOffsetRequest, db: Session = Depends(get_db)):
+    """관리자용: 서버 시간 오프셋 설정 (ms 단위)"""
+    cfg = db.query(models.SystemConfig).filter(models.SystemConfig.key == "server_time_offset_ms").first()
+    if cfg:
+        cfg.value = str(req.offset_ms)
+    else:
+        db.add(models.SystemConfig(key="server_time_offset_ms", value=str(req.offset_ms)))
+    db.commit()
+    return {"message": "서버 시간 오프셋이 설정되었습니다.", "offset_ms": req.offset_ms}
+
+
+@app.get("/api/v1/admin/system-status")
+def get_system_status(db: Session = Depends(get_db)):
+    """관리자용: 시스템 모니터링 데이터 - DB 상태, 수강신청 현황, 대기열 현황"""
+    import time
+    from sqlalchemy import text as sa_text
+    t0 = time.time()
+    try:
+        db.execute(sa_text("SELECT 1"))
+        db_ok = True
+    except Exception:
+        db_ok = False
+
+    # DB 응답시간
+    db_latency_ms = round((time.time() - t0) * 1000, 1)
+
+    # 수강신청 현황
+    total_completed = db.query(models.Enrollment).filter(models.Enrollment.enroll_status == "COMPLETED").count()
+    total_basket = db.query(models.Enrollment).filter(models.Enrollment.enroll_status == "BASKET").count()
+    total_canceled = db.query(models.Enrollment).filter(models.Enrollment.enroll_status == "CANCELED").count()
+
+    # 대기열 현황
+    waitlist_waiting = db.query(models.Waitlist).filter(models.Waitlist.status == "WAITING").count()
+    waitlist_promoted = db.query(models.Waitlist).filter(models.Waitlist.status == "PROMOTED").count()
+
+    # 현재 수강신청 활성 스케줄
+    active_schedule = _get_active_schedule(db)
+    enrollment_active = active_schedule is not None
+    active_day_info = None
+    if active_schedule:
+        active_day_info = {
+            "day_number": active_schedule.day_number,
+            "restriction_type": active_schedule.restriction_type,
+            "close_datetime": active_schedule.close_datetime.isoformat() + "Z"
+        }
+
+    # 가장 최근 수강신청 5건
+    recent_enrollments = db.query(models.Enrollment).order_by(
+        models.Enrollment.created_at.desc()
+    ).limit(5).all()
+    recent_list = [
+        {
+            "enroll_no": e.id,
+            "user_id": e.user_id,
+            "lecture_id": e.lecture_id,
+            "status": e.enroll_status,
+            "created_at": e.created_at.isoformat() + "Z" if e.created_at else None
+        }
+        for e in recent_enrollments
+    ]
+
+    # 전체 학생/강좌 수
+    total_students = db.query(models.User).filter(models.User.role == "STUDENT").count()
+    total_lectures = db.query(models.Lecture).count()
+
+    server_time_ms = int(datetime.now(timezone.utc).timestamp() * 1000)
+    offset_cfg = db.query(models.SystemConfig).filter(models.SystemConfig.key == "server_time_offset_ms").first()
+    offset_ms = int(offset_cfg.value) if offset_cfg else 0
+
+    return {
+        "db_status": "정상" if db_ok else "오류",
+        "db_latency_ms": db_latency_ms,
+        "server_time_ms": server_time_ms + offset_ms,
+        "offset_ms": offset_ms,
+        "enrollment_active": enrollment_active,
+        "active_day": active_day_info,
+        "enrollments": {
+            "completed": total_completed,
+            "basket": total_basket,
+            "canceled": total_canceled
+        },
+        "waitlist": {
+            "waiting": waitlist_waiting,
+            "promoted": waitlist_promoted
+        },
+        "total_students": total_students,
+        "total_lectures": total_lectures,
+        "recent_enrollments": recent_list
+    }
+
+
 # --- 프론트엔드 정적 파일 서빙 ---
 # (API 경로를 먼저 정의한 후 마지막에 마운트해야 API가 우선순위를 가집니다)
 frontend_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "frontend"))

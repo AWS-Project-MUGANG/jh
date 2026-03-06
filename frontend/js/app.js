@@ -460,6 +460,20 @@ async function checkEnrollmentPeriod() {
     });
 
     try {
+        // 서버 시간 기준으로 판단 (클라이언트 시계 오차 방지)
+        let now;
+        try {
+            const before = Date.now();
+            const timeRes = await fetch('/api/time');
+            const after = Date.now();
+            if (timeRes.ok) {
+                const td = await timeRes.json();
+                const halfRtt = Math.round((after - before) / 2);
+                now = new Date(td.timestamp_ms + halfRtt);
+            }
+        } catch (e) {}
+        if (!now) now = new Date(); // 서버 시간 조회 실패 시 로컬 시계 폴백
+
         const token = localStorage.getItem('access_token');
         const res = await fetch('/api/v1/admin/enrollment-schedule', {
             headers: { 'Authorization': `Bearer ${token}` }
@@ -468,7 +482,6 @@ async function checkEnrollmentPeriod() {
 
         const data = await res.json();
         const schedules = data.schedules || [];
-        const now = new Date();
 
         const banner = document.getElementById('enrollment-period-banner');
         const text   = document.getElementById('enrollment-period-text');
