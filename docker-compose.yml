@@ -11,9 +11,8 @@ services:
     ports:
       - "8000:8000"
     environment:
-      - DATABASE_URL=sqlite:///./test.db # 향후 RDS 호스트 입력
-    volumes:
-      - ./backend:/app # 로컬 코드 변경 실시간 반영
+      # 호스트의 SSH 터널링된 포트(5432)를 통해 실제 AWS RDS에 접속
+      - DATABASE_URL=postgresql://mugangadmin:!!anrkddl615@host.docker.internal:5432/mugang
 
   # 프론트엔드 (바닐라 JS + Nginx) 컨테이너
   frontend:
@@ -21,7 +20,7 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
     ports:
-      - "80:80"
+      - "8888:80"
     # 프론트 컨테이너 시작 전 백엔드 서버가 먼저 켜지게 의존성 설정
     depends_on:
       - backend

@@ -69,8 +69,13 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# 프론트엔드 정적 파일 연결 (도커 환경 대응)
 frontend_path = os.path.join(os.path.dirname(__file__), "..", "frontend")
-app.mount("/static", StaticFiles(directory=frontend_path), name="static")
+if os.path.exists(frontend_path):
+    app.mount("/static", StaticFiles(directory=frontend_path), name="static")
+    logger.info(f"정적 파일 경로 연결됨: {frontend_path}")
+else:
+    logger.warning(f"정적 파일 경로를 찾을 수 없습니다 (도커 환경 혹은 경로 오류): {frontend_path}")
 
 # ---- API 요청/응답 데이터 모델 (Pydantic) ----
 class FirstSetupRequest(BaseModel):
