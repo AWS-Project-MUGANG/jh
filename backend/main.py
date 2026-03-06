@@ -11,8 +11,7 @@ from passlib.context import CryptContext
 from jose import jwt
 from datetime import datetime, timedelta, timezone
 from sqlalchemy import create_engine, Column, Integer, String, Boolean, DateTime, ForeignKey, BigInteger
-from sqlalchemy.orm import sessionmaker, declarative_base, relationship
-from sqlalchemy.orm import sessionmaker, declarative_base, relationship, joinedload
+from sqlalchemy.orm import sessionmaker, declarative_base, relationship, joinedload, selectinload
 from sqlalchemy.types import Enum as SAEnum
 from sqlalchemy.pool import StaticPool
 import uuid
@@ -365,17 +364,35 @@ def get_filter_options(db: Session = Depends(get_db)):
 
 # --- 강의 (lecture_tb) ---
 @app.get("/api/v1/lectures")
-def get_lectures(db: Session = Depends(get_db)):
-    """강의 목록 전체 조회 (수강신청 화면용) - schedule_tb 조인"""
-    lectures = db.query(models.Lecture).all()
-    # department 이름 → college 역조회 맵 (dept_no 미설정 강의 fallback용)
-    dept_college_map = {d.depart: d.college for d in db.query(models.Depart).all()}
-    """강의 목록 전체 조회 (수강신청 화면용) - Eager Loading 최적화"""
-    # N+1 문제 해결: schedules와 depart 정보를 한 번의 쿼리로 Join해서 가져옴
-    lectures = db.query(models.Lecture).options(
-        joinedload(models.Lecture.schedules),
-        joinedload(models.Lecture.depart)
-    ).all()
+def get_lectures(
+    page: int = 1,
+    size: int = 50,
+    college: Optional[str] = None,
+    lec_grade: Optional[str] = None,
+    lecture_type: Optional[str] = None,
+    search: Optional[str] = None,
+    db: Session = Depends(get_db)
+):
+    """강의 목록 조회 (수강신청 화면용) - 페이지네이션 + 필터 + selectinload 최적화"""
+    query = db.query(models.Lecture).options(
+        selectinload(models.Lecture.schedules),  # OneToMany: selectinload로 Cartesian product 방지
+        joinedload(models.Lecture.depart)        # ManyToOne: joinedload 유지
+    )
+
+    # 필터 적용
+    if college:
+        query = query.join(models.Depart, models.Lecture.dept_no == models.Depart.dept_no).filter(
+            models.Depart.college == college
+        )
+    if lec_grade:
+        query = query.filter(models.Lecture.lec_grade == lec_grade)
+    if lecture_type:
+        query = query.filter(models.Lecture.type == lecture_type)
+    if search:
+        query = query.filter(models.Lecture.subject.ilike(f"%{search}%"))
+
+    total = query.count()
+    lectures = query.offset((page - 1) * size).limit(size).all()
 
     # FK가 없는 레거시 데이터 처리를 위한 맵 (필요할 때만 생성)
     dept_college_map = None
@@ -387,40 +404,45 @@ def get_lectures(db: Session = Depends(get_db)):
                 "day_of_week": s.day_of_week,
                 "start_time": str(s.start_time) if s.start_time else None,
                 "end_time": str(s.end_time) if s.end_time else None,
+                "classroom": s.classroom,
             }
             for s in lec.schedules
         ]
-        college = lec.depart.college if lec.depart else dept_college_map.get(lec.department)
-        # dept_no FK 연결 시 depart_tb의 공식 학과명 사용 (필터 일치를 위해)
-        department = lec.depart.depart if lec.depart else lec.department
-        
+
         # 1. FK 관계(depart)가 있으면 우선 사용 (가장 빠름)
         if lec.depart:
-            college = lec.depart.college
+            college_name = lec.depart.college
             department = lec.depart.depart
         else:
-            # 2. FK가 없으면 문자열 매칭 시도 (Lazy Loading for Map)
+            # 2. FK가 없으면 문자열 매칭 시도 (레거시 데이터 대응)
             if dept_college_map is None:
                 dept_college_map = {d.depart: d.college for d in db.query(models.Depart).all()}
             department = lec.department
-            college = dept_college_map.get(department)
+            college_name = dept_college_map.get(department)
 
         result.append({
             "lecture_id": lec.lecture_id,
             "course_no": lec.course_no,
             "subject": lec.subject,
-            "college": college,
+            "college": college_name,
             "department": department,
             "lec_grade": lec.lec_grade,
             "credit": lec.credit,
             "professor": lec.professor,
-            "classroom": lec.classroom,
+            "classroom": lec.schedules[0].classroom if lec.schedules else None,
             "type": lec.type,
             "capacity": lec.capacity,
             "count": lec.count,
             "schedules": schedules,
         })
-    return {"lectures": result}
+
+    return {
+        "lectures": result,
+        "total": total,
+        "page": page,
+        "size": size,
+        "total_pages": (total + size - 1) // size,
+    }
 
 
 
@@ -430,7 +452,10 @@ def get_lectures(db: Session = Depends(get_db)):
 def get_user_enrollments(user_id: int, db: Session = Depends(get_db)):
     """사용자의 수강신청 내역 조회 (lecture_tb 조인) - CANCELED 제외"""
     dept_college_map = {d.depart: d.college for d in db.query(models.Depart).all()}
-    enrollments = db.query(models.Enrollment).filter(
+    enrollments = db.query(models.Enrollment).options(
+        joinedload(models.Enrollment.lecture).joinedload(models.Lecture.depart),
+        joinedload(models.Enrollment.lecture).selectinload(models.Lecture.schedules)
+    ).filter(
         models.Enrollment.user_id == user_id,
         models.Enrollment.enroll_status != "CANCELED"
     ).all()
@@ -438,13 +463,14 @@ def get_user_enrollments(user_id: int, db: Session = Depends(get_db)):
     for en in enrollments:
         lec = en.lecture
         college = (lec.depart.college if lec.depart else dept_college_map.get(lec.department)) if lec else None
+        classroom = (lec.schedules[0].classroom if lec.schedules else None) if lec else None
         result.append({
             "id": en.id,
             "lecture_id": en.lecture_id,
             "subject": lec.subject if lec else None,
             "college": college,
             "department": (lec.depart.depart if lec.depart else lec.department) if lec else None,
-            "classroom": lec.classroom if lec else None,
+            "classroom": classroom,
             "professor": lec.professor if lec else None,
             "type": lec.type if lec else None,
             "credits": lec.credit if lec else None,
@@ -626,7 +652,9 @@ def drop_enrollment(enrollment_id: int, db: Session = Depends(get_db)):
 @app.get("/api/v1/student/{user_id}/stats")
 def get_student_stats(user_id: int, db: Session = Depends(get_db)):
     """학생용: 이수 학점 및 성적 조회"""
-    enrollments = db.query(models.Enrollment).filter(
+    enrollments = db.query(models.Enrollment).options(
+        joinedload(models.Enrollment.lecture)
+    ).filter(
         models.Enrollment.user_id == user_id,
         models.Enrollment.status == "enrolled"
     ).all()
@@ -635,12 +663,21 @@ def get_student_stats(user_id: int, db: Session = Depends(get_db)):
 
     grades = db.query(models.Grade).filter(models.Grade.user_id == user_id).all()
 
+    # enrollment를 한 번에 map으로 로드 (루프 내 개별 쿼리 제거)
+    enrollment_ids = [g.enrollment_id for g in grades]
+    enrollment_map = {}
+    if enrollment_ids:
+        loaded = db.query(models.Enrollment).options(
+            joinedload(models.Enrollment.lecture)
+        ).filter(models.Enrollment.id.in_(enrollment_ids)).all()
+        enrollment_map = {en.id: en for en in loaded}
+
     grade_points = {"A+": 4.5, "A0": 4.0, "B+": 3.5, "B0": 3.0, "C+": 2.5, "C0": 2.0, "D+": 1.5, "D0": 1.0, "F": 0.0}
 
     total_point_sum = 0
     total_credit_sum = 0
     for g in grades:
-        en = db.query(models.Enrollment).filter(models.Enrollment.id == g.enrollment_id).first()
+        en = enrollment_map.get(g.enrollment_id)
         if en and en.lecture and g.grade_letter in grade_points:
             total_point_sum += grade_points[g.grade_letter] * en.lecture.credit
             total_credit_sum += en.lecture.credit
@@ -666,7 +703,9 @@ def get_admin_enrollments(
     """관리자용: 개설 과목별 수강생 전체 현황 (필터링 추가)"""
     dept_college_map = {d.depart: d.college for d in db.query(models.Depart).all()}
 
-    query = db.query(models.Enrollment)
+    query = db.query(models.Enrollment).options(
+        joinedload(models.Enrollment.lecture).joinedload(models.Lecture.depart)
+    )
     if lecture_id:
         query = query.filter(models.Enrollment.lecture_id == lecture_id)
 
@@ -727,13 +766,12 @@ async def upload_courses_batch(file: UploadFile = File(...), db: Session = Depen
     reader = csv.DictReader(stringio)
     
     lectures_to_insert = []
-    # CSV 헤더 예시: subject, department, classroom, professor, type, credit, capacity, waitlist_capacity
+    # CSV 헤더 예시: subject, department, professor, type, credit, capacity, waitlist_capacity
     for row in reader:
         lectures_to_insert.append(
             models.Lecture(
                 subject=row.get("subject"),
                 department=row.get("department"),
-                classroom=row.get("classroom"),
                 professor=row.get("professor"),
                 type=row.get("type"),
                 credit=int(row.get("credit", 3)),
@@ -785,6 +823,7 @@ async def upload_courses_pdf(file: UploadFile = File(...), db: Session = Depends
                         # lecture_tb 데이터 생성
                         dept_name = row[2].replace('\n', '')
                         matched_dept = db.query(models.Depart).filter(models.Depart.depart == dept_name).first()
+                        pdf_classroom = row[9].replace('\n', '') if row[9] else "미지정"
                         lecture = models.Lecture(
                             course_no=c_no,
                             subject=row[4].replace('\n', ''),
@@ -793,14 +832,13 @@ async def upload_courses_pdf(file: UploadFile = File(...), db: Session = Depends
                             lec_grade=row[1],
                             credit=int(row[5]) if row[5].isdigit() else 3,
                             professor=row[7].replace('\n', '') if row[7] else "미지정",
-                            classroom=row[9].replace('\n', '') if row[9] else "미지정",
                             type=row[0].strip(),
                             capacity=40,
                             version=0
                         )
                         db.add(lecture)
                         db.flush() # ID 획득을 위해 flush
-                        
+
                         # schedule_tb 데이터 분리 및 저장
                         matches = time_re.findall(raw_time)
                         for day, start, end in matches:
@@ -810,7 +848,8 @@ async def upload_courses_pdf(file: UploadFile = File(...), db: Session = Depends
                                 start_min=to_mins(start),
                                 end_min=to_mins(end),
                                 start_time=start + ":00",
-                                end_time=end + ":00"
+                                end_time=end + ":00",
+                                classroom=pdf_classroom
                             )
                             db.add(schedule)
                     except Exception:

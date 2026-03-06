@@ -46,11 +46,10 @@ class Lecture(Base):
     subject = Column(String(200), nullable=False)
     department = Column(String(100))
     dept_no = Column(BigInteger, ForeignKey("depart_tb.dept_no"), nullable=True)
-    lec_grade = Column(String(10))
+    lec_grade = Column(String(10), index=True)
     credit = Column(Integer)
     professor = Column(String(50))
-    classroom = Column(String(100))
-    type = Column(SAEnum('전공필수', '전공선택', '교양필수', '교양선택', '교직', '공통', name='lecture_category'))
+    type = Column(SAEnum('전공필수', '전공선택', '교양필수', '교양선택', '교직', '공통', name='lecture_category'), index=True)
     capacity = Column(Integer, default=0)
     count = Column(Integer, default=0)
     waitlist_capacity = Column(Integer, default=10) # 큐 정원
