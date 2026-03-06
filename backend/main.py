@@ -695,39 +695,45 @@ def get_student_stats(user_id: int, db: Session = Depends(get_db)):
 # --- 관리자: 수강 현황 및 대시보드 ---
 @app.get("/api/v1/admin/enrollments")
 def get_admin_enrollments(
+    page: int = 1,
+    size: int = 10,
     college: Optional[str] = None,
     grade: Optional[str] = None,
     lecture_id: Optional[int] = None,
     db: Session = Depends(get_db)
 ):
-    """관리자용: 개설 과목별 수강생 전체 현황 (필터링 추가)"""
-    # DB 레벨에서 필터링 + 한 번의 쿼리로 enrollment/lecture/depart/user 전부 로드
-    query = db.query(models.Enrollment).options(
-        joinedload(models.Enrollment.lecture).joinedload(models.Lecture.depart),
-        joinedload(models.Enrollment.user)
-    ).join(models.Lecture, models.Enrollment.lecture_id == models.Lecture.lecture_id)
+    """관리자용: 개설 과목별 수강생 현황 (페이지네이션 적용)"""
+    # 1. 강의(Lecture)를 기준으로 먼저 페이징
+    query = db.query(models.Lecture).options(
+        joinedload(models.Lecture.depart)
+    )
 
-    # CANCELED·BASKET 제외 — 불필요한 행 로드 차단
-    query = query.filter(models.Enrollment.enroll_status == "COMPLETED")
-
+    # 필터 적용
     if lecture_id:
-        query = query.filter(models.Enrollment.lecture_id == lecture_id)
+        query = query.filter(models.Lecture.lecture_id == lecture_id)
     if grade:
         query = query.filter(models.Lecture.lec_grade == grade)
     if college:
         query = query.join(models.Depart, models.Lecture.dept_no == models.Depart.dept_no)\
                      .filter(models.Depart.college == college)
 
-    enrollments = query.all()
+    # 전체 개수 및 페이징 처리
+    total = query.count()
+    lectures = query.order_by(models.Lecture.subject).offset((page - 1) * size).limit(size).all()
 
     # 레거시 데이터(dept_no 없는 강의) 대비 fallback map - 필요할 때만 생성
     dept_college_map = None
 
-    summary = {}
-    for en in enrollments:
-        lec = en.lecture
-        if not lec:
-            continue
+    classes_result = []
+
+    for lec in lectures:
+        # 해당 강의의 수강생(COMPLETED) 조회
+        enrollments = db.query(models.Enrollment).options(
+            joinedload(models.Enrollment.user)
+        ).filter(
+            models.Enrollment.lecture_id == lec.lecture_id,
+            models.Enrollment.enroll_status == "COMPLETED"
+        ).all()
 
         # college 필터가 없거나 이미 DB에서 걸렸으므로, 레거시 fallback만 처리
         if college and not lec.dept_no:
@@ -736,23 +742,31 @@ def get_admin_enrollments(
             if dept_college_map.get(lec.department) != college:
                 continue
 
-        subject_key = lec.subject
-        if subject_key not in summary:
-            summary[subject_key] = {
-                "lecture_id": en.lecture_id,
-                "subject": subject_key,
-                "capacity": lec.capacity or 0,
-                "count": lec.count or 0,
-                "students": []
-            }
-        user = en.user  # joinedload로 이미 로드됨 — 추가 쿼리 없음
-        summary[subject_key]["students"].append({
-            "enrollment_id": en.id,
-            "user_id": en.user_id,
-            "student_id": user.loginid if user else "Unknown",
-            "name": user.user_name if user else "Unknown"
+        student_list = []
+        for en in enrollments:
+            user = en.user
+            student_list.append({
+                "enrollment_id": en.id,
+                "user_id": en.user_id,
+                "student_id": user.loginid if user else "Unknown",
+                "name": user.user_name if user else "Unknown"
+            })
+
+        classes_result.append({
+            "lecture_id": lec.lecture_id,
+            "subject": lec.subject,
+            "capacity": lec.capacity or 0,
+            "count": lec.count or 0,
+            "students": student_list
         })
-    return {"classes": list(summary.values())}
+
+    return {
+        "classes": classes_result,
+        "total": total,
+        "page": page,
+        "size": size,
+        "total_pages": (total + size - 1) // size
+    }
 
 
 @app.get("/api/v1/admin/stats")

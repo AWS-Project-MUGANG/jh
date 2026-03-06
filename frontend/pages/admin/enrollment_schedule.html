@@ -128,13 +128,14 @@
                 <p class="sub-dept"></p>
             </div>
         </div>
+        <!-- onclick="switchNav('dashboard.html?tab=courses', 'tab-courses') -->
         <nav class="sidebar-nav">
-                <button class="nav-item active" id="tab-dashboard" onclick="switchTab('dashboard')">대시보드 홈</button>
-                <button class="nav-item" id="tab-courses" onclick="switchTab('courses')">수업 개설 관리</button>
-                <button class="nav-item" onclick="location.href='enrollment_schedule.html'">수강신청 기간 설정</button>
-                <button class="nav-item" onclick="location.href='rag_update.html'">학사 규정 AI 업데이트</button>
-                <button class="nav-item logout-btn" onclick="logout()">로그아웃</button>
-            </nav>
+            <button class="nav-item" id="tab-dashboard" onclick="switchNav('dashboard.html', 'tab-dashboard')">대시보드 홈</button>
+            <button class="nav-item" id="tab-courses" onclick="switchNav('dashboard.html?tab=courses', 'tab-courses')">수업 개설 관리</button>
+            <button class="nav-item active" id="tab-enrollment">수강신청 기간 설정</button>
+            <button class="nav-item" id="tab-rag" onclick="switchNav('rag_update.html', 'tab-rag')">학사 규정 AI 업데이트</button>
+            <button class="nav-item logout-btn" onclick="logout()">로그아웃</button>
+        </nav>
     </aside>
 
     <!-- ===== Main Content ===== -->
@@ -331,6 +332,12 @@ const token = localStorage.getItem('access_token');
         }
     } catch (e) { console.error('프로필 로드 오류:', e); }
 })();
+
+function switchNav(href, tabId) {
+    document.querySelectorAll('.sidebar-nav .nav-item').forEach(btn => btn.classList.remove('active'));
+    document.getElementById(tabId).classList.add('active');
+    location.href = href;
+}
 
 function logout() {
     localStorage.clear();

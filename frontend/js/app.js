@@ -1,6 +1,10 @@
 // 강의 목록을 저장할 전역 변수 (API 연동)
 let courseList = [];
 
+// 페이지네이션 상태
+let currentPage = 1;
+let totalPages = 1;
+
 // 단과대학 → 학과 목록 (필터바용)
 let departmentsData = {};
 
@@ -106,13 +110,31 @@ window.applyFilter = function() {
     activeFilter.department = document.getElementById('filter-department').value;
     activeFilter.type = document.getElementById('filter-type').value;
     activeFilter.grade = document.getElementById('filter-grade').value;
-    renderSugangList();
+    loadCourseList(1); // 페이지 초기화 후 서버 재조회
 };
 
-// 수강목록 API에서 불러오기
-async function loadCourseList() {
+// 수강목록 API에서 불러오기 (서버사이드 필터 + 페이지네이션)
+async function loadCourseList(page = 1) {
     try {
-        const res = await fetch('/api/v1/lectures');
+        const params = new URLSearchParams({ page, size: 50 });
+
+        // 수강신청 일차별 제한을 서버 필터로 전달
+        if (currentSchedule && userProfile) {
+            const rt = currentSchedule.restriction_type;
+            if (rt === 'own_grade_dept' || rt === 'own_college') {
+                params.set('college', userProfile.college);
+            }
+            if (rt === 'own_grade_dept' && userProfile.grade) {
+                params.set('lec_grade', String(userProfile.grade));
+            }
+        }
+
+        // 사용자 필터 (사용자 필터가 제한 필터보다 우선)
+        if (activeFilter.college) params.set('college', activeFilter.college);
+        if (activeFilter.type)    params.set('lecture_type', activeFilter.type);
+        if (activeFilter.grade)   params.set('lec_grade', activeFilter.grade);
+
+        const res = await fetch(`/api/v1/lectures?${params}`);
         if(res.ok) {
             const data = await res.json();
             courseList = data.lectures.map(lec => ({
@@ -120,7 +142,10 @@ async function loadCourseList() {
                 id: lec.lecture_id,
                 room: lec.classroom,
             }));
+            currentPage = data.page;
+            totalPages  = data.total_pages;
             renderSugangList();
+            renderPagination();
         }
     } catch(e) { console.error('Failed to load courses:', e); }
 }
@@ -130,32 +155,13 @@ function renderSugangList() {
     sugangTbody.innerHTML = '';
     let filtered = courseList;
 
-    // 일차별 수강신청 제한 필터 (어드민 스케줄 기준)
-    if (currentSchedule && userProfile) {
-        const rt = currentSchedule.restriction_type;
-        if (rt === 'own_grade_dept') {
-            // 본인 학년 · 단과대 · 학과만 표시
-            filtered = filtered.filter(i =>
-                i.college === userProfile.college &&
-                i.department === userProfile.depart &&
-                String(i.lec_grade).replace(/[^0-9]/g, '') === String(userProfile.grade)
-            );
-        } else if (rt === 'own_college') {
-            // 본인 단과대 전체(타학과 허용)
-            filtered = filtered.filter(i => i.college === userProfile.college);
-        }
-        // 'all' → 제한 없음, 그대로 진행
+    // 학과 필터만 클라이언트에서 처리 (백엔드에 학과별 필터 없음)
+    if (activeFilter.department) {
+        filtered = filtered.filter(i => i.department === activeFilter.department);
     }
-
-    if(activeFilter.college) filtered = filtered.filter(i => i.college === activeFilter.college);
-    if(activeFilter.department) filtered = filtered.filter(i => i.department === activeFilter.department);
-    if(activeFilter.type) {
-        // DB 데이터(예: '전공', '전필')와 필터(예: '전공필수') 간 유연한 매칭
-        filtered = filtered.filter(i => i.type && (activeFilter.type.includes(i.type) || i.type.includes(activeFilter.type)));
-    }
-    if(activeFilter.grade) {
-        // '1학년'과 '1' 숫자만 추출하여 비교
-        filtered = filtered.filter(i => String(i.lec_grade).replace(/[^0-9]/g, '') === activeFilter.grade);
+    // own_grade_dept 제한: 학과까지 추가 필터링 (단과대·학년은 서버에서 처리됨)
+    if (currentSchedule && userProfile && currentSchedule.restriction_type === 'own_grade_dept') {
+        filtered = filtered.filter(i => i.department === userProfile.depart);
     }
     if(filtered.length === 0) {
         sugangTbody.innerHTML = '<tr><td colspan="9" style="text-align:center; color:#999;">조건에 해당하는 강의가 없습니다.</td></tr>';
@@ -170,8 +176,13 @@ function renderSugangList() {
             badge = `<span style="background:#e53935; color:white; padding:2px 6px; border-radius:4px; font-size:0.8rem; margin-left:5px;">정원초과</span>`;
         }
         let btnLabel = isFull ? '대기하기' : '담기';
-        let btnDisabled = alreadyInCart ? 'disabled style="background:#bbb; cursor:not-allowed;"' : '';
-        if (alreadyInCart) btnLabel = '신청완료';
+        let btnDisabled = '';
+        if (alreadyInCart) {
+            btnLabel = '신청완료';
+            btnDisabled = 'disabled style="background:#bbb; cursor:not-allowed;"';
+        } else if (!isEnrollmentActive) {
+            btnDisabled = 'disabled style="background:#bbb; cursor:not-allowed;" title="수강신청 기간이 아닙니다"';
+        }
 
         const tr = document.createElement('tr');
         tr.innerHTML = `
@@ -187,6 +198,45 @@ function renderSugangList() {
         `;
         sugangTbody.appendChild(tr);
     });
+}
+
+// 페이지네이션 UI 렌더링
+function renderPagination() {
+    let container = document.getElementById('sugang-pagination');
+    if (!container) {
+        container = document.createElement('div');
+        container.id = 'sugang-pagination';
+        container.style.cssText = 'text-align:center; margin:10px 0; display:flex; gap:4px; justify-content:center; align-items:center; flex-wrap:wrap;';
+        sugangTbody.closest('table').insertAdjacentElement('afterend', container);
+    }
+    container.innerHTML = '';
+    if (totalPages <= 1) return;
+
+    const makeBtn = (label, page, active, disabled) => {
+        const b = document.createElement('button');
+        b.textContent = label;
+        b.disabled = disabled;
+        b.style.cssText = `padding:4px 10px; border:1px solid #ccc; border-radius:4px;
+            cursor:${disabled ? 'not-allowed' : 'pointer'};
+            background:${active ? '#1565c0' : '#fff'};
+            color:${active ? '#fff' : '#333'};
+            font-weight:${active ? 'bold' : 'normal'};`;
+        if (!disabled) b.onclick = () => loadCourseList(page);
+        return b;
+    };
+
+    container.appendChild(makeBtn('◀', currentPage - 1, false, currentPage === 1));
+    const start = Math.max(1, currentPage - 2);
+    const end   = Math.min(totalPages, start + 4);
+    for (let i = start; i <= end; i++) {
+        container.appendChild(makeBtn(i, i, i === currentPage, i === currentPage));
+    }
+    container.appendChild(makeBtn('▶', currentPage + 1, false, currentPage === totalPages));
+
+    const info = document.createElement('span');
+    info.style.cssText = 'font-size:0.85rem; color:#666; margin-left:6px;';
+    info.textContent = `${currentPage} / ${totalPages} 페이지`;
+    container.appendChild(info);
 }
 
 // 장바구니 렌더링 (enroll_status 기준: BASKET=예비수강신청, COMPLETED=수강확정)
@@ -207,7 +257,8 @@ function renderCart() {
             actionBtn = `<button class="btn-reject" onclick="dropEnrollment('${item.id}')" style="background-color:#d32f2f; color:white; border:none; padding:5px 10px; border-radius:4px; cursor:pointer;">수강철회</button>`;
         } else if(status === 'BASKET') {
             statusLabel = '<span style="color:#e65100; font-weight:bold;">예비 수강신청</span>';
-            actionBtn = `<button class="btn-approve" onclick="confirmEnrollment('${item.id}')" style="background-color:#2e7d32; color:white; border:none; padding:5px 10px; border-radius:4px; cursor:pointer;">최종신청</button> <button class="btn-reject" onclick="dropEnrollment('${item.id}')" style="background-color:#757575; color:white; border:none; padding:5px 10px; border-radius:4px; margin-left:4px; cursor:pointer;">삭제</button>`;
+            const confirmDisabled = !isEnrollmentActive ? 'disabled style="background:#bbb; cursor:not-allowed;" title="수강신청 기간이 아닙니다"' : 'style="background-color:#2e7d32; color:white; border:none; padding:5px 10px; border-radius:4px; cursor:pointer;"';
+            actionBtn = `<button class="btn-approve" onclick="confirmEnrollment('${item.id}')" ${confirmDisabled}>최종신청</button> <button class="btn-reject" onclick="dropEnrollment('${item.id}')" style="background-color:#757575; color:white; border:none; padding:5px 10px; border-radius:4px; margin-left:4px; cursor:pointer;">삭제</button>`;
         } else {
             statusLabel = `<span style="color:#999;">${status || '-'}</span>`;
         }
@@ -469,8 +520,8 @@ async function checkEnrollmentPeriod() {
             }
         }
 
-        // 제한 조건 반영하여 목록 재렌더링
-        renderSugangList();
+        // 제한 조건이 바뀌었으므로 서버에서 재조회
+        loadCourseList(1);
     } catch (e) { console.error('수강신청 기간 확인 오류:', e); }
 }
 
@@ -589,8 +640,7 @@ window.onload = async function() {
     }
     await loadUserProfile();
     await loadDepartments();
-    await loadCourseList();
-    await checkEnrollmentPeriod();
+    await checkEnrollmentPeriod(); // currentSchedule 세팅 + loadCourseList(1) 내부 호출
     await loadEnrollments();
     await loadStats();
     await loadNotices();
