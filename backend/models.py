@@ -22,7 +22,7 @@ class User(Base):
     loginid = Column(String(50), unique=True, nullable=False)
     password = Column(String(255), nullable=False)
     role = Column(SAEnum('STUDENT', 'STAFF', name='role_enum'), nullable=False)
-    user_name = Column(String(50), nullable=False)
+    user_name = Column(String(50), nullable=False, index=True)
     grade = Column(Integer, nullable=True)
     dept_no = Column(BigInteger, ForeignKey("depart_tb.dept_no", ondelete="SET NULL"), nullable=True)
     user_status = Column(SAEnum('재학', '휴학', '재직', '퇴직', name='status_enum'), nullable=False)
@@ -44,13 +44,12 @@ class Lecture(Base):
     lecture_id = Column(Integer, primary_key=True, autoincrement=True)
     course_no = Column(String(20), unique=True)
     subject = Column(String(200), nullable=False)
-    department = Column(String(100))
+    department = Column(String(100), index=True)
     dept_no = Column(BigInteger, ForeignKey("depart_tb.dept_no"), nullable=True)
-    lec_grade = Column(String(10))
+    lec_grade = Column(String(10), index=True)
     credit = Column(Integer)
     professor = Column(String(50))
-    classroom = Column(String(100))
-    type = Column(SAEnum('전공필수', '전공선택', '교양필수', '교양선택', '교직', '공통', name='lecture_category'))
+    type = Column(SAEnum('전공필수', '전공선택', '교양필수', '교양선택', '교직', '공통', name='lecture_category'), index=True)
     capacity = Column(Integer, default=0)
     count = Column(Integer, default=0)
     waitlist_capacity = Column(Integer, default=10) # 큐 정원
@@ -91,6 +90,7 @@ class Enrollment(Base):
     created_at = Column("createdat", DateTime, default=datetime.utcnow)
 
     lecture = relationship("Lecture", back_populates="enrollments")
+    user = relationship("User", foreign_keys=[user_id])
 
 
 class Notice(Base):

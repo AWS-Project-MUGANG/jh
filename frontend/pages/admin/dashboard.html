@@ -59,9 +59,9 @@
             <nav class="sidebar-nav">
                 <button class="nav-item active" id="tab-dashboard" onclick="switchTab('dashboard')">대시보드 홈</button>
                 <button class="nav-item" id="tab-courses" onclick="switchTab('courses')">수업 개설 관리</button>
-                <button class="nav-item" onclick="location.href='enrollment_schedule.html'">수강신청 기간 설정</button>
-                <button class="nav-item" onclick="location.href='approvals.html'">결재 / 서류 반려함</button>
-                <button class="nav-item" onclick="location.href='rag_update.html'">학사 규정 AI 업데이트</button>
+                <button class="nav-item" id="tab-enrollment" onclick="switchNav('enrollment_schedule.html', 'tab-enrollment')">수강신청 기간 설정</button>
+                <button class="nav-item" id="tab-rag" onclick="switchNav('rag_update.html', 'tab-rag')">학사 규정 AI 업데이트</button>
+                <button class="nav-item" id="tab-server" onclick="switchNav('server_management.html', 'tab-server')">서버 관리</button>
                 <button class="nav-item logout-btn" onclick="logout()">로그아웃</button>
             </nav>
         </aside>
@@ -77,8 +77,8 @@
 
             <div class="content-area">
                 <!-- 대시보드 탭 -->
-                <div id="panel-dashboard" class="panel active">
-                    <h2>강의 종합 현황</h2>
+                <div id="panel-dashboard" class="panel" style="display: none;">
+                    <!-- <h2>강의 종합 현황</h2>
                     <div class="stat-grid">
                         <div class="admin-stat-card">
                             <p>대학교 전체 수강 신청 건수</p>
@@ -92,7 +92,7 @@
                             <p>현재 가입된 학생 수</p>
                             <div class="stat-number" id="admin-total-students" style="color:white;">-</div>
                         </div>
-                    </div>
+                    </div> -->
 
                         <!-- 수강신청 기간 설정 영역 시작
                         <section class="list-section"
@@ -117,7 +117,7 @@
                         </section> -->
 
                         <!-- 공지사항 등록 영역 추가 -->
-                        <section class="list-section"
+                        <!-- <section class="list-section"
                             style="margin-bottom: 30px; background: #f9f9f9; padding: 20px; border-radius: 8px;">
                             <h3>📣 신규 공지사항 등록</h3>
                             <div style="display: flex; gap: 10px; margin-top: 10px;">
@@ -129,7 +129,7 @@
                                     style="flex: 1; white-space: nowrap;">공지
                                     올리기</button>
                             </div>
-                        </section>
+                        </section> -->
 
                         <!-- 강사/관리자 전용 데이터 테이블 (추가 구축 예정 영역) -->
                         <section class="list-section">
@@ -293,6 +293,22 @@
     </div>
 
     <script>
+        // 깜빡임 없이 즉시 올바른 패널 표시 (DOMContentLoaded 이전 동기 실행)
+        (function () {
+            var tab = new URLSearchParams(window.location.search).get('tab') || 'dashboard';
+            var panels = ['dashboard', 'courses'];
+            panels.forEach(function (p) {
+                var el = document.getElementById('panel-' + p);
+                if (el) el.style.display = (p === tab) ? 'block' : 'none';
+            });
+            var navBtns = document.querySelectorAll('.sidebar-nav .nav-item');
+            navBtns.forEach(function (btn) { btn.classList.remove('active'); });
+            var activeTab = document.getElementById('tab-' + tab);
+            if (activeTab) activeTab.classList.add('active');
+        })();
+    </script>
+
+    <script>
         document.addEventListener('DOMContentLoaded', async () => {
             // 세션 체크 + STAFF 권한 확인
             const token = localStorage.getItem('access_token');
@@ -339,6 +355,7 @@
 
             // 필터 옵션 동적 로드
             initFilters();
+
         });
 
         async function initFilters() {
@@ -412,6 +429,12 @@
                     });
                 }
             } catch (e) { console.error(e); }
+        }
+
+        function switchNav(href, tabId) {
+            document.querySelectorAll('.sidebar-nav .nav-item').forEach(btn => btn.classList.remove('active'));
+            document.getElementById(tabId).classList.add('active');
+            location.href = href;
         }
 
         function switchTab(tabName) {
