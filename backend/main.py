@@ -91,7 +91,7 @@ class LoginRequest(BaseModel):
     password: str
 
 class ChatRequest(BaseModel):
-    user_id: str
+    user_id: int
     session_id: str
     message: str
 
@@ -111,8 +111,8 @@ class NoticeRequest(BaseModel):
     content: str
 
 class GradeRequest(BaseModel):
-    enrollment_id: str
-    user_id: str
+    enrollment_id: int
+    user_id: int
     score: int
     grade_letter: str
 
@@ -126,7 +126,7 @@ class EnrollmentPeriodRequest(BaseModel):
     end_time: str    # ISO Format
 
 class EnrollmentRequest(BaseModel):
-    user_id: str
+    user_id: int
     lecture_id: int  # lecture_tb.lecture_id 참조
 
 class EnrollmentScheduleDayRequest(BaseModel):
@@ -404,7 +404,7 @@ def get_lectures(db: Session = Depends(get_db)):
 # --- 수강신청 (enrollments) ---
 
 @app.get("/api/v1/enrollments/{user_id}")
-def get_user_enrollments(user_id: str, db: Session = Depends(get_db)):
+def get_user_enrollments(user_id: int, db: Session = Depends(get_db)):
     """사용자의 수강신청 내역 조회 (lecture_tb 조인) - CANCELED 제외"""
     dept_college_map = {d.depart: d.college for d in db.query(models.Depart).all()}
     enrollments = db.query(models.Enrollment).filter(
@@ -521,7 +521,7 @@ def create_enrollment(req: EnrollmentRequest, db: Session = Depends(get_db)):
 
 
 @app.put("/api/v1/enrollments/{enrollment_id}/confirm")
-def confirm_enrollment(enrollment_id: str, db: Session = Depends(get_db)):
+def confirm_enrollment(enrollment_id: int, db: Session = Depends(get_db)):
     """수강 장바구니 → 최종 신청 확정"""
     if not is_enrollment_period_active(db):
         raise HTTPException(status_code=403, detail="현재는 수강신청 기간이 아닙니다.")
@@ -535,7 +535,7 @@ def confirm_enrollment(enrollment_id: str, db: Session = Depends(get_db)):
 
 
 @app.delete("/api/v1/enrollments/{enrollment_id}")
-def drop_enrollment(enrollment_id: str, db: Session = Depends(get_db)):
+def drop_enrollment(enrollment_id: int, db: Session = Depends(get_db)):
     """수강 철회 및 대기열 승급(Promotion) 로직 (트랜잭션 롤백 포함)"""
     en = db.query(models.Enrollment).filter(models.Enrollment.id == enrollment_id).first()
     if not en:
@@ -588,7 +588,7 @@ def drop_enrollment(enrollment_id: str, db: Session = Depends(get_db)):
 
 # --- 학생 통계 ---
 @app.get("/api/v1/student/{user_id}/stats")
-def get_student_stats(user_id: str, db: Session = Depends(get_db)):
+def get_student_stats(user_id: int, db: Session = Depends(get_db)):
     """학생용: 이수 학점 및 성적 조회"""
     enrollments = db.query(models.Enrollment).filter(
         models.Enrollment.user_id == user_id,
@@ -966,7 +966,7 @@ def submit_grade(req: GradeRequest, db: Session = Depends(get_db)):
 
 # --- 사용자 정보 조회 ---
 @app.get("/api/v1/users/{user_id}")
-def get_user_profile(user_id: str, db: Session = Depends(get_db)):
+def get_user_profile(user_id: int, db: Session = Depends(get_db)):
     user = db.query(models.User).filter(models.User.user_no == user_id).first()
     if not user:
         raise HTTPException(status_code=404, detail="사용자를 찾을 수 없습니다.")
@@ -986,7 +986,7 @@ def get_user_profile(user_id: str, db: Session = Depends(get_db)):
 
 # --- 사용자 정보 수정 ---
 @app.put("/api/v1/users/{user_id}")
-def update_user_profile(user_id: str, req: UserUpdateRequest, db: Session = Depends(get_db)):
+def update_user_profile(user_id: int, req: UserUpdateRequest, db: Session = Depends(get_db)):
     user = db.query(models.User).filter(models.User.user_no == user_id).first()
     if not user:
         raise HTTPException(status_code=404, detail="사용자를 찾을 수 없습니다.")
@@ -1049,7 +1049,7 @@ def save_enrollment_schedule(req: EnrollmentScheduleBulkRequest, db: Session = D
 
 
 @app.get("/api/v1/enrollment/access-check")
-def enrollment_access_check(user_id: str, lecture_id: Optional[int] = None, db: Session = Depends(get_db)):
+def enrollment_access_check(user_id: int, lecture_id: Optional[int] = None, db: Session = Depends(get_db)):
     """학생용: 현재 수강신청 가능 여부 및 활성 일차 반환"""
     user = db.query(models.User).filter(models.User.user_no == user_id).first()
     if not user:

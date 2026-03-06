@@ -7,6 +7,8 @@ ssh -i "mugang-key.pem" -L 5432:terraform-20260303070103185000000001.cba8sagacwb
 
 # backend
 python -m uvicorn main:app --reload
+uvicorn main:app --reload
+uvicorn main:app --host 0.0.0.0 --port 8000
 
 # frontend
 python -m http.server 8080

@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, Integer, BigInteger, DateTime, ForeignKey, JSON, Time, Enum as SAEnum, Boolean
+from sqlalchemy import Column, String, Integer, BigInteger, DateTime, Date, ForeignKey, JSON, Time, Enum as SAEnum, Boolean
 from sqlalchemy.orm import relationship
 from datetime import datetime
 import uuid
@@ -26,6 +26,7 @@ class User(Base):
     grade = Column(Integer, nullable=True)
     dept_no = Column(BigInteger, ForeignKey("depart_tb.dept_no", ondelete="SET NULL"), nullable=True)
     user_status = Column(SAEnum('재학', '휴학', '재직', '퇴직', name='status_enum'), nullable=False)
+    birth_date = Column(Date, nullable=True)
     email = Column(String(150), unique=True, nullable=True)
     phone = Column(String(20), nullable=True)
     is_first_login = Column(Boolean, default=True)
@@ -70,7 +71,7 @@ class ScheduleTb(Base):
     end_min = Column(Integer)
     start_time = Column(Time)
     end_time = Column(Time)
-    classroom = Column(String(100))
+    classroom = Column(String(50))
 
     lecture = relationship("Lecture", back_populates="schedules")
 
@@ -83,9 +84,9 @@ class Enrollment(Base):
 
     id = Column("enroll_no", BigInteger, primary_key=True, autoincrement=True)
     user_id = Column("loginid", BigInteger, ForeignKey("user_tb.user_no"))
-    lecture_id = Column(Integer, ForeignKey("lecture_tb.lecture_id"))
+    lecture_id = Column(BigInteger, ForeignKey("lecture_tb.lecture_id"))
     sche_no = Column(BigInteger, nullable=True)
-    enroll_status = Column(String(9), nullable=True)
+    enroll_status = Column(SAEnum('COMPLETED', 'CANCELED', 'BASKET', name='enroll_status_enum'), nullable=True)
     status = Column(String(20), default="cart")
     created_at = Column("createdat", DateTime, default=datetime.utcnow)
 
