@@ -308,12 +308,21 @@ window.addToCart = async function(id) {
             alert(`'${item.subject}' 수강신청이 데이터베이스에 정상 등록되었습니다.`);
             await loadEnrollments(); // DB에 저장되었으므로 다시 불러와서 화면에 반영합니다.
         } else {
-            const errorData = await response.json();
-            alert(`수강신청 실패: ${errorData.detail}`);
+            let detail = `HTTP ${response.status}`;
+            try {
+                const errorData = await response.json();
+                if (errorData && errorData.detail) detail = errorData.detail;
+            } catch (_) {
+                try {
+                    const text = await response.text();
+                    if (text) detail = text.slice(0, 200);
+                } catch (_) {}
+            }
+            alert(`수강신청 실패: ${detail}`);
         }
     } catch (error) {
         console.error('Enroll error:', error);
-        alert('서버 또는 DB 연결에 실패했습니다.');
+        alert('서버 연결에 실패했습니다. 백엔드 서버 상태와 네트워크를 확인해주세요.');
     }
 }
 

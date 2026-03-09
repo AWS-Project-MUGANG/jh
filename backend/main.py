@@ -10,10 +10,11 @@ from sqlalchemy.orm import Session
 from passlib.context import CryptContext
 from jose import jwt
 from datetime import datetime, timedelta, timezone
-from sqlalchemy import create_engine, Column, Integer, String, Boolean, DateTime, ForeignKey, BigInteger
+from sqlalchemy import create_engine, Column, Integer, String, Boolean, DateTime, ForeignKey, BigInteger, text
 from sqlalchemy.orm import sessionmaker, declarative_base, relationship
 from sqlalchemy.types import Enum as SAEnum
 from sqlalchemy.pool import StaticPool
+from sqlalchemy.exc import SQLAlchemyError, IntegrityError
 import uuid
 import csv
 import io
@@ -48,7 +49,25 @@ def create_access_token(data: dict):
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# 시작 시 DB 테이블 자동 생성 (개발용)
+def ensure_schema_compatibility():
+    """Legacy DB schema와 현재 ORM 모델 간의 최소 호환성 보정."""
+    try:
+        with engine.begin() as conn:
+            # user_tb: 구 스키마에 없을 수 있는 컬럼
+            conn.execute(text("ALTER TABLE user_tb ADD COLUMN IF NOT EXISTS email VARCHAR(150)"))
+            conn.execute(text("ALTER TABLE user_tb ADD COLUMN IF NOT EXISTS phone VARCHAR(20)"))
+            conn.execute(text("ALTER TABLE user_tb ADD COLUMN IF NOT EXISTS is_first_login BOOLEAN DEFAULT TRUE"))
+
+            # enroll_tb: 구 스키마에 없을 수 있는 컬럼
+            conn.execute(text("ALTER TABLE enroll_tb ADD COLUMN IF NOT EXISTS status VARCHAR(20) DEFAULT 'cart'"))
+
+            # 구 DDL에서 sche_no가 NOT NULL이면 강의 담기 INSERT가 실패할 수 있어 해제
+            conn.execute(text("ALTER TABLE enroll_tb ALTER COLUMN sche_no DROP NOT NULL"))
+    except Exception as e:
+        logger.warning(f"Schema compatibility patch skipped or partially failed: {e}")
+
+# 시작 시 DB 스키마 보정 + 테이블 생성 (개발용)
+ensure_schema_compatibility()
 models.Base.metadata.create_all(bind=engine)
 
 # FastAPI 앱 생성
@@ -464,7 +483,12 @@ def create_enrollment(req: EnrollmentRequest, db: Session = Depends(get_db)):
             status="WAITING"
         )
         db.add(new_waitlist)
-        db.commit()
+        try:
+            db.commit()
+        except SQLAlchemyError as e:
+            db.rollback()
+            logger.exception("Waitlist insert failed")
+            raise HTTPException(status_code=500, detail=f"대기열 등록 중 DB 오류가 발생했습니다: {str(e)}")
         
         # 내 순번 도출
         my_order = db.query(models.Waitlist).filter(
@@ -490,14 +514,30 @@ def create_enrollment(req: EnrollmentRequest, db: Session = Depends(get_db)):
         db.rollback()
         raise HTTPException(status_code=409, detail="수강신청 중 충돌이 발생했습니다. 다시 시도해주세요.")
 
+    # 구 DB에서는 sche_no가 NOT NULL일 수 있어 강의의 첫 스케줄을 기본값으로 사용
+    first_schedule = db.query(models.ScheduleTb).filter(
+        models.ScheduleTb.lecture_id == req.lecture_id
+    ).order_by(models.ScheduleTb.sche_no.asc()).first()
+
     new_enrollment = models.Enrollment(
         user_id=req.user_id,
         lecture_id=req.lecture_id,
+        sche_no=first_schedule.sche_no if first_schedule else None,
         enroll_status="BASKET"
     )
     db.add(new_enrollment)
-    db.commit()
-    db.refresh(new_enrollment)
+    try:
+        db.commit()
+        db.refresh(new_enrollment)
+    except IntegrityError as e:
+        db.rollback()
+        logger.exception("Enrollment insert integrity error")
+        raise HTTPException(status_code=409, detail=f"수강신청 저장 중 무결성 오류가 발생했습니다: {str(e.orig)}")
+    except SQLAlchemyError as e:
+        db.rollback()
+        logger.exception("Enrollment insert failed")
+        raise HTTPException(status_code=500, detail=f"수강신청 저장 중 DB 오류가 발생했습니다: {str(e)}")
+
     return {"message": "예비 수강신청이 완료되었습니다.", "enrollment_id": new_enrollment.id, "enroll_status": "BASKET"}
 
 
