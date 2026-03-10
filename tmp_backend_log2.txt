@@ -1,0 +1,355 @@
+﻿docker : time="2026-03-10T16:
+12:59+09:00" level=warning ms
+g="C:\\Users\\junse\\Desktop\
+\vscode\\team-project\\mugang
+_aws\\docker-compose.yml: the
+ attribute `version` is obsol
+ete, it will be ignored, plea
+se remove it to avoid potenti
+al confusion"
+위치 줄:1 문자:1
++ docker compose logs backend
+ 2>&1 | Out-File -Encoding UT
+F8 "C:\Users\ ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~
+    + CategoryInfo           
+   : NotSpecified: (time="2  
+  026-03-1...tial confusio   
+ n":String) [], RemoteExc    
+eption
+    + FullyQualifiedErrorId  
+   : NativeCommandError
+ 
+backend-1  | WARNING:main:Schema compatibility patch skipped or partially failed: (psycopg2.OperationalError) could not translate host name "db-tunnel" to address: Name or service not known
+backend-1  | 
+backend-1  | (Background on this error at: https://sqlalche.me/e/20/e3q8)
+backend-1  | Traceback (most recent call last):
+backend-1  |   File "/usr/local/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 143, in __init__
+backend-1  |     self._dbapi_connection = engine.raw_connection()
+backend-1  |                              ^^^^^^^^^^^^^^^^^^^^^^^
+backend-1  |   File "/usr/local/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 3317, in raw_connection
+backend-1  |     return self.pool.connect()
+backend-1  |            ^^^^^^^^^^^^^^^^^^^
+backend-1  |   File "/usr/local/lib/python3.11/site-packages/sqlalchemy/pool/base.py", line 448, in connect
+backend-1  |     return _ConnectionFairy._checkout(self)
+backend-1  |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+backend-1  |   File "/usr/local/lib/python3.11/site-packages/sqlalchemy/pool/base.py", line 1272, in _checkout
+backend-1  |     fairy = _ConnectionRecord.checkout(pool)
+backend-1  |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+backend-1  |   File "/usr/local/lib/python3.11/site-packages/sqlalchemy/pool/base.py", line 712, in checkout
+backend-1  |     rec = pool._do_get()
+backend-1  |           ^^^^^^^^^^^^^^
+backend-1  |   File "/usr/local/lib/python3.11/site-packages/sqlalchemy/pool/impl.py", line 177, in _do_get
+backend-1  |     with util.safe_reraise():
+backend-1  |   File "/usr/local/lib/python3.11/site-packages/sqlalchemy/util/langhelpers.py", line 121, in __exit__
+backend-1  |     raise exc_value.with_traceback(exc_tb)
+backend-1  |   File "/usr/local/lib/python3.11/site-packages/sqlalchemy/pool/impl.py", line 175, in _do_get
+backend-1  |     return self._create_connection()
+backend-1  |            ^^^^^^^^^^^^^^^^^^^^^^^^^
+backend-1  |   File "/usr/local/lib/python3.11/site-packages/sqlalchemy/pool/base.py", line 389, in _create_connection
+backend-1  |     return _ConnectionRecord(self)
+backend-1  |            ^^^^^^^^^^^^^^^^^^^^^^^
+backend-1  |   File "/usr/local/lib/python3.11/site-packages/sqlalchemy/pool/base.py", line 674, in __init__
+backend-1  |     self.__connect()
+backend-1  |   File "/usr/local/lib/python3.11/site-packages/sqlalchemy/pool/base.py", line 900, in __connect
+backend-1  |     with util.safe_reraise():
+backend-1  |   File "/usr/local/lib/python3.11/site-packages/sqlalchemy/util/langhelpers.py", line 121, in __exit__
+backend-1  |     raise exc_value.with_traceback(exc_tb)
+backend-1  |   File "/usr/local/lib/python3.11/site-packages/sqlalchemy/pool/base.py", line 896, in __connect
+backend-1  |     self.dbapi_connection = connection = pool._invoke_creator(self)
+backend-1  |                                          ^^^^^^^^^^^^^^^^^^^^^^^^^^
+backend-1  |   File "/usr/local/lib/python3.11/site-packages/sqlalchemy/engine/create.py", line 667, in connect
+backend-1  |     return dialect.connect(*cargs_tup, **cparams)
+backend-1  |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+backend-1  |   File "/usr/local/lib/python3.11/site-packages/sqlalchemy/engine/default.py", line 630, in connect
+backend-1  |     return self.loaded_dbapi.connect(*cargs, **cparams)  # type: ignore[no-any-return]  # NOQA: E501
+backend-1  |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+backend-1  |   File "/usr/local/lib/python3.11/site-packages/psycopg2/__init__.py", line 122, in connect
+backend-1  |     conn = _connect(dsn, connection_factory=connection_factory, **kwasync)
+backend-1  |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+backend-1  | psycopg2.OperationalError: could not translate host name "db-tunnel" to address: Name or service not known
+backend-1  | 
+backend-1  | 
+backend-1  | The above exception was the direct cause of the following exception:
+backend-1  | 
+backend-1  | Traceback (most recent call last):
+backend-1  |   File "/usr/local/bin/uvicorn", line 8, in <module>
+backend-1  |     sys.exit(main())
+backend-1  |              ^^^^^^
+backend-1  |   File "/usr/local/lib/python3.11/site-packages/click/core.py", line 1485, in __call__
+backend-1  |     return self.main(*args, **kwargs)
+backend-1  |            ^^^^^^^^^^^^^^^^^^^^^^^^^^
+backend-1  |   File "/usr/local/lib/python3.11/site-packages/click/core.py", line 1406, in main
+backend-1  |     rv = self.invoke(ctx)
+backend-1  |          ^^^^^^^^^^^^^^^^
+backend-1  |   File "/usr/local/lib/python3.11/site-packages/click/core.py", line 1269, in invoke
+backend-1  |     return ctx.invoke(self.callback, **ctx.params)
+backend-1  |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+backend-1  |   File "/usr/local/lib/python3.11/site-packages/click/core.py", line 824, in invoke
+backend-1  |     return callback(*args, **kwargs)
+backend-1  |            ^^^^^^^^^^^^^^^^^^^^^^^^^
+backend-1  |   File "/usr/local/lib/python3.11/site-packages/uvicorn/main.py", line 433, in main
+backend-1  |     run(
+backend-1  |   File "/usr/local/lib/python3.11/site-packages/uvicorn/main.py", line 606, in run
+backend-1  |     server.run()
+backend-1  |   File "/usr/local/lib/python3.11/site-packages/uvicorn/server.py", line 75, in run
+backend-1  |     return asyncio_run(self.serve(sockets=sockets), loop_factory=self.config.get_loop_factory())
+backend-1  |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+backend-1  |   File "/usr/local/lib/python3.11/site-packages/uvicorn/_compat.py", line 30, in asyncio_run
+backend-1  |     return runner.run(main)
+backend-1  |            ^^^^^^^^^^^^^^^^
+backend-1  |   File "/usr/local/lib/python3.11/asyncio/runners.py", line 118, in run
+backend-1  |     return self._loop.run_until_complete(task)
+backend-1  |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+backend-1  |   File "uvloop/loop.pyx", line 1518, in uvloop.loop.Loop.run_until_complete
+backend-1  |   File "/usr/local/lib/python3.11/site-packages/uvicorn/server.py", line 79, in serve
+backend-1  |     await self._serve(sockets)
+backend-1  |   File "/usr/local/lib/python3.11/site-packages/uvicorn/server.py", line 86, in _serve
+backend-1  |     config.load()
+backend-1  |   File "/usr/local/lib/python3.11/site-packages/uvicorn/config.py", line 441, in load
+backend-1  |     self.loaded_app = import_from_string(self.app)
+backend-1  |                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+backend-1  |   File "/usr/local/lib/python3.11/site-packages/uvicorn/importer.py", line 19, in import_from_string
+backend-1  |     module = importlib.import_module(module_str)
+backend-1  |              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+backend-1  |   File "/usr/local/lib/python3.11/importlib/__init__.py", line 126, in import_module
+backend-1  |     return _bootstrap._gcd_import(name[level:], package, level)
+backend-1  |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+backend-1  |   File "<frozen importlib._bootstrap>", line 1204, in _gcd_import
+backend-1  |   File "<frozen importlib._bootstrap>", line 1176, in _find_and_load
+backend-1  |   File "<frozen importlib._bootstrap>", line 1147, in _find_and_load_unlocked
+backend-1  |   File "<frozen importlib._bootstrap>", line 690, in _load_unlocked
+backend-1  |   File "<frozen importlib._bootstrap_external>", line 940, in exec_module
+backend-1  |   File "<frozen importlib._bootstrap>", line 241, in _call_with_frames_removed
+backend-1  |   File "/app/main.py", line 75, in <module>
+backend-1  |     models.Base.metadata.create_all(bind=engine)
+backend-1  |   File "/usr/local/lib/python3.11/site-packages/sqlalchemy/sql/schema.py", line 5928, in create_all
+backend-1  |     bind._run_ddl_visitor(
+backend-1  |   File "/usr/local/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 3267, in _run_ddl_visitor
+backend-1  |     with self.begin() as conn:
+backend-1  |   File "/usr/local/lib/python3.11/contextlib.py", line 137, in __enter__
+backend-1  |     return next(self.gen)
+backend-1  |            ^^^^^^^^^^^^^^
+backend-1  |   File "/usr/local/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 3257, in begin
+backend-1  |     with self.connect() as conn:
+backend-1  |          ^^^^^^^^^^^^^^
+backend-1  |   File "/usr/local/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 3293, in connect
+backend-1  |     return self._connection_cls(self)
+backend-1  |            ^^^^^^^^^^^^^^^^^^^^^^^^^^
+backend-1  |   File "/usr/local/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 145, in __init__
+backend-1  |     Connection._handle_dbapi_exception_noconnection(
+backend-1  |   File "/usr/local/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 2448, in _handle_dbapi_exception_noconnection
+backend-1  |     raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+backend-1  |   File "/usr/local/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 143, in __init__
+backend-1  |     self._dbapi_connection = engine.raw_connection()
+backend-1  |                              ^^^^^^^^^^^^^^^^^^^^^^^
+backend-1  |   File "/usr/local/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 3317, in raw_connection
+backend-1  |     return self.pool.connect()
+backend-1  |            ^^^^^^^^^^^^^^^^^^^
+backend-1  |   File "/usr/local/lib/python3.11/site-packages/sqlalchemy/pool/base.py", line 448, in connect
+backend-1  |     return _ConnectionFairy._checkout(self)
+backend-1  |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+backend-1  |   File "/usr/local/lib/python3.11/site-packages/sqlalchemy/pool/base.py", line 1272, in _checkout
+backend-1  |     fairy = _ConnectionRecord.checkout(pool)
+backend-1  |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+backend-1  |   File "/usr/local/lib/python3.11/site-packages/sqlalchemy/pool/base.py", line 712, in checkout
+backend-1  |     rec = pool._do_get()
+backend-1  |           ^^^^^^^^^^^^^^
+backend-1  |   File "/usr/local/lib/python3.11/site-packages/sqlalchemy/pool/impl.py", line 177, in _do_get
+backend-1  |     with util.safe_reraise():
+backend-1  |   File "/usr/local/lib/python3.11/site-packages/sqlalchemy/util/langhelpers.py", line 121, in __exit__
+backend-1  |     raise exc_value.with_traceback(exc_tb)
+backend-1  |   File "/usr/local/lib/python3.11/site-packages/sqlalchemy/pool/impl.py", line 175, in _do_get
+backend-1  |     return self._create_connection()
+backend-1  |            ^^^^^^^^^^^^^^^^^^^^^^^^^
+backend-1  |   File "/usr/local/lib/python3.11/site-packages/sqlalchemy/pool/base.py", line 389, in _create_connection
+backend-1  |     return _ConnectionRecord(self)
+backend-1  |            ^^^^^^^^^^^^^^^^^^^^^^^
+backend-1  |   File "/usr/local/lib/python3.11/site-packages/sqlalchemy/pool/base.py", line 674, in __init__
+backend-1  |     self.__connect()
+backend-1  |   File "/usr/local/lib/python3.11/site-packages/sqlalchemy/pool/base.py", line 900, in __connect
+backend-1  |     with util.safe_reraise():
+backend-1  |   File "/usr/local/lib/python3.11/site-packages/sqlalchemy/util/langhelpers.py", line 121, in __exit__
+backend-1  |     raise exc_value.with_traceback(exc_tb)
+backend-1  |   File "/usr/local/lib/python3.11/site-packages/sqlalchemy/pool/base.py", line 896, in __connect
+backend-1  |     self.dbapi_connection = connection = pool._invoke_creator(self)
+backend-1  |                                          ^^^^^^^^^^^^^^^^^^^^^^^^^^
+backend-1  |   File "/usr/local/lib/python3.11/site-packages/sqlalchemy/engine/create.py", line 667, in connect
+backend-1  |     return dialect.connect(*cargs_tup, **cparams)
+backend-1  |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+backend-1  |   File "/usr/local/lib/python3.11/site-packages/sqlalchemy/engine/default.py", line 630, in connect
+backend-1  |     return self.loaded_dbapi.connect(*cargs, **cparams)  # type: ignore[no-any-return]  # NOQA: E501
+backend-1  |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+backend-1  |   File "/usr/local/lib/python3.11/site-packages/psycopg2/__init__.py", line 122, in connect
+backend-1  |     conn = _connect(dsn, connection_factory=connection_factory, **kwasync)
+backend-1  |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+backend-1  | sqlalchemy.exc.OperationalError: (psycopg2.OperationalError) could not translate host name "db-tunnel" to address: Name or service not known
+backend-1  | 
+backend-1  | (Background on this error at: https://sqlalche.me/e/20/e3q8)
+backend-1  | WARNING:main:Schema compatibility patch skipped or partially failed: (psycopg2.OperationalError) could not translate host name "db-tunnel" to address: Name or service not known
+backend-1  | 
+backend-1  | (Background on this error at: https://sqlalche.me/e/20/e3q8)
+backend-1  | Traceback (most recent call last):
+backend-1  |   File "/usr/local/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 143, in __init__
+backend-1  |     self._dbapi_connection = engine.raw_connection()
+backend-1  |                              ^^^^^^^^^^^^^^^^^^^^^^^
+backend-1  |   File "/usr/local/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 3317, in raw_connection
+backend-1  |     return self.pool.connect()
+backend-1  |            ^^^^^^^^^^^^^^^^^^^
+backend-1  |   File "/usr/local/lib/python3.11/site-packages/sqlalchemy/pool/base.py", line 448, in connect
+backend-1  |     return _ConnectionFairy._checkout(self)
+backend-1  |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+backend-1  |   File "/usr/local/lib/python3.11/site-packages/sqlalchemy/pool/base.py", line 1272, in _checkout
+backend-1  |     fairy = _ConnectionRecord.checkout(pool)
+backend-1  |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+backend-1  |   File "/usr/local/lib/python3.11/site-packages/sqlalchemy/pool/base.py", line 712, in checkout
+backend-1  |     rec = pool._do_get()
+backend-1  |           ^^^^^^^^^^^^^^
+backend-1  |   File "/usr/local/lib/python3.11/site-packages/sqlalchemy/pool/impl.py", line 177, in _do_get
+backend-1  |     with util.safe_reraise():
+backend-1  |   File "/usr/local/lib/python3.11/site-packages/sqlalchemy/util/langhelpers.py", line 121, in __exit__
+backend-1  |     raise exc_value.with_traceback(exc_tb)
+backend-1  |   File "/usr/local/lib/python3.11/site-packages/sqlalchemy/pool/impl.py", line 175, in _do_get
+backend-1  |     return self._create_connection()
+backend-1  |            ^^^^^^^^^^^^^^^^^^^^^^^^^
+backend-1  |   File "/usr/local/lib/python3.11/site-packages/sqlalchemy/pool/base.py", line 389, in _create_connection
+backend-1  |     return _ConnectionRecord(self)
+backend-1  |            ^^^^^^^^^^^^^^^^^^^^^^^
+backend-1  |   File "/usr/local/lib/python3.11/site-packages/sqlalchemy/pool/base.py", line 674, in __init__
+backend-1  |     self.__connect()
+backend-1  |   File "/usr/local/lib/python3.11/site-packages/sqlalchemy/pool/base.py", line 900, in __connect
+backend-1  |     with util.safe_reraise():
+backend-1  |   File "/usr/local/lib/python3.11/site-packages/sqlalchemy/util/langhelpers.py", line 121, in __exit__
+backend-1  |     raise exc_value.with_traceback(exc_tb)
+backend-1  |   File "/usr/local/lib/python3.11/site-packages/sqlalchemy/pool/base.py", line 896, in __connect
+backend-1  |     self.dbapi_connection = connection = pool._invoke_creator(self)
+backend-1  |                                          ^^^^^^^^^^^^^^^^^^^^^^^^^^
+backend-1  |   File "/usr/local/lib/python3.11/site-packages/sqlalchemy/engine/create.py", line 667, in connect
+backend-1  |     return dialect.connect(*cargs_tup, **cparams)
+backend-1  |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+backend-1  |   File "/usr/local/lib/python3.11/site-packages/sqlalchemy/engine/default.py", line 630, in connect
+backend-1  |     return self.loaded_dbapi.connect(*cargs, **cparams)  # type: ignore[no-any-return]  # NOQA: E501
+backend-1  |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+backend-1  |   File "/usr/local/lib/python3.11/site-packages/psycopg2/__init__.py", line 122, in connect
+backend-1  |     conn = _connect(dsn, connection_factory=connection_factory, **kwasync)
+backend-1  |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+backend-1  | psycopg2.OperationalError: could not translate host name "db-tunnel" to address: Name or service not known
+backend-1  | 
+backend-1  | 
+backend-1  | The above exception was the direct cause of the following exception:
+backend-1  | 
+backend-1  | Traceback (most recent call last):
+backend-1  |   File "/usr/local/bin/uvicorn", line 8, in <module>
+backend-1  |     sys.exit(main())
+backend-1  |              ^^^^^^
+backend-1  |   File "/usr/local/lib/python3.11/site-packages/click/core.py", line 1485, in __call__
+backend-1  |     return self.main(*args, **kwargs)
+backend-1  |            ^^^^^^^^^^^^^^^^^^^^^^^^^^
+backend-1  |   File "/usr/local/lib/python3.11/site-packages/click/core.py", line 1406, in main
+backend-1  |     rv = self.invoke(ctx)
+backend-1  |          ^^^^^^^^^^^^^^^^
+backend-1  |   File "/usr/local/lib/python3.11/site-packages/click/core.py", line 1269, in invoke
+backend-1  |     return ctx.invoke(self.callback, **ctx.params)
+backend-1  |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+backend-1  |   File "/usr/local/lib/python3.11/site-packages/click/core.py", line 824, in invoke
+backend-1  |     return callback(*args, **kwargs)
+backend-1  |            ^^^^^^^^^^^^^^^^^^^^^^^^^
+backend-1  |   File "/usr/local/lib/python3.11/site-packages/uvicorn/main.py", line 433, in main
+backend-1  |     run(
+backend-1  |   File "/usr/local/lib/python3.11/site-packages/uvicorn/main.py", line 606, in run
+backend-1  |     server.run()
+backend-1  |   File "/usr/local/lib/python3.11/site-packages/uvicorn/server.py", line 75, in run
+backend-1  |     return asyncio_run(self.serve(sockets=sockets), loop_factory=self.config.get_loop_factory())
+backend-1  |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+backend-1  |   File "/usr/local/lib/python3.11/site-packages/uvicorn/_compat.py", line 30, in asyncio_run
+backend-1  |     return runner.run(main)
+backend-1  |            ^^^^^^^^^^^^^^^^
+backend-1  |   File "/usr/local/lib/python3.11/asyncio/runners.py", line 118, in run
+backend-1  |     return self._loop.run_until_complete(task)
+backend-1  |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+backend-1  |   File "uvloop/loop.pyx", line 1518, in uvloop.loop.Loop.run_until_complete
+backend-1  |   File "/usr/local/lib/python3.11/site-packages/uvicorn/server.py", line 79, in serve
+backend-1  |     await self._serve(sockets)
+backend-1  |   File "/usr/local/lib/python3.11/site-packages/uvicorn/server.py", line 86, in _serve
+backend-1  |     config.load()
+backend-1  |   File "/usr/local/lib/python3.11/site-packages/uvicorn/config.py", line 441, in load
+backend-1  |     self.loaded_app = import_from_string(self.app)
+backend-1  |                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+backend-1  |   File "/usr/local/lib/python3.11/site-packages/uvicorn/importer.py", line 19, in import_from_string
+backend-1  |     module = importlib.import_module(module_str)
+backend-1  |              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+backend-1  |   File "/usr/local/lib/python3.11/importlib/__init__.py", line 126, in import_module
+backend-1  |     return _bootstrap._gcd_import(name[level:], package, level)
+backend-1  |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+backend-1  |   File "<frozen importlib._bootstrap>", line 1204, in _gcd_import
+backend-1  |   File "<frozen importlib._bootstrap>", line 1176, in _find_and_load
+backend-1  |   File "<frozen importlib._bootstrap>", line 1147, in _find_and_load_unlocked
+backend-1  |   File "<frozen importlib._bootstrap>", line 690, in _load_unlocked
+backend-1  |   File "<frozen importlib._bootstrap_external>", line 940, in exec_module
+backend-1  |   File "<frozen importlib._bootstrap>", line 241, in _call_with_frames_removed
+backend-1  |   File "/app/main.py", line 75, in <module>
+backend-1  |     models.Base.metadata.create_all(bind=engine)
+backend-1  |   File "/usr/local/lib/python3.11/site-packages/sqlalchemy/sql/schema.py", line 5928, in create_all
+backend-1  |     bind._run_ddl_visitor(
+backend-1  |   File "/usr/local/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 3267, in _run_ddl_visitor
+backend-1  |     with self.begin() as conn:
+backend-1  |   File "/usr/local/lib/python3.11/contextlib.py", line 137, in __enter__
+backend-1  |     return next(self.gen)
+backend-1  |            ^^^^^^^^^^^^^^
+backend-1  |   File "/usr/local/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 3257, in begin
+backend-1  |     with self.connect() as conn:
+backend-1  |          ^^^^^^^^^^^^^^
+backend-1  |   File "/usr/local/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 3293, in connect
+backend-1  |     return self._connection_cls(self)
+backend-1  |            ^^^^^^^^^^^^^^^^^^^^^^^^^^
+backend-1  |   File "/usr/local/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 145, in __init__
+backend-1  |     Connection._handle_dbapi_exception_noconnection(
+backend-1  |   File "/usr/local/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 2448, in _handle_dbapi_exception_noconnection
+backend-1  |     raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+backend-1  |   File "/usr/local/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 143, in __init__
+backend-1  |     self._dbapi_connection = engine.raw_connection()
+backend-1  |                              ^^^^^^^^^^^^^^^^^^^^^^^
+backend-1  |   File "/usr/local/lib/python3.11/site-packages/sqlalchemy/engine/base.py", line 3317, in raw_connection
+backend-1  |     return self.pool.connect()
+backend-1  |            ^^^^^^^^^^^^^^^^^^^
+backend-1  |   File "/usr/local/lib/python3.11/site-packages/sqlalchemy/pool/base.py", line 448, in connect
+backend-1  |     return _ConnectionFairy._checkout(self)
+backend-1  |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+backend-1  |   File "/usr/local/lib/python3.11/site-packages/sqlalchemy/pool/base.py", line 1272, in _checkout
+backend-1  |     fairy = _ConnectionRecord.checkout(pool)
+backend-1  |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+backend-1  |   File "/usr/local/lib/python3.11/site-packages/sqlalchemy/pool/base.py", line 712, in checkout
+backend-1  |     rec = pool._do_get()
+backend-1  |           ^^^^^^^^^^^^^^
+backend-1  |   File "/usr/local/lib/python3.11/site-packages/sqlalchemy/pool/impl.py", line 177, in _do_get
+backend-1  |     with util.safe_reraise():
+backend-1  |   File "/usr/local/lib/python3.11/site-packages/sqlalchemy/util/langhelpers.py", line 121, in __exit__
+backend-1  |     raise exc_value.with_traceback(exc_tb)
+backend-1  |   File "/usr/local/lib/python3.11/site-packages/sqlalchemy/pool/impl.py", line 175, in _do_get
+backend-1  |     return self._create_connection()
+backend-1  |            ^^^^^^^^^^^^^^^^^^^^^^^^^
+backend-1  |   File "/usr/local/lib/python3.11/site-packages/sqlalchemy/pool/base.py", line 389, in _create_connection
+backend-1  |     return _ConnectionRecord(self)
+backend-1  |            ^^^^^^^^^^^^^^^^^^^^^^^
+backend-1  |   File "/usr/local/lib/python3.11/site-packages/sqlalchemy/pool/base.py", line 674, in __init__
+backend-1  |     self.__connect()
+backend-1  |   File "/usr/local/lib/python3.11/site-packages/sqlalchemy/pool/base.py", line 900, in __connect
+backend-1  |     with util.safe_reraise():
+backend-1  |   File "/usr/local/lib/python3.11/site-packages/sqlalchemy/util/langhelpers.py", line 121, in __exit__
+backend-1  |     raise exc_value.with_traceback(exc_tb)
+backend-1  |   File "/usr/local/lib/python3.11/site-packages/sqlalchemy/pool/base.py", line 896, in __connect
+backend-1  |     self.dbapi_connection = connection = pool._invoke_creator(self)
+backend-1  |                                          ^^^^^^^^^^^^^^^^^^^^^^^^^^
+backend-1  |   File "/usr/local/lib/python3.11/site-packages/sqlalchemy/engine/create.py", line 667, in connect
+backend-1  |     return dialect.connect(*cargs_tup, **cparams)
+backend-1  |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+backend-1  |   File "/usr/local/lib/python3.11/site-packages/sqlalchemy/engine/default.py", line 630, in connect
+backend-1  |     return self.loaded_dbapi.connect(*cargs, **cparams)  # type: ignore[no-any-return]  # NOQA: E501
+backend-1  |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+backend-1  |   File "/usr/local/lib/python3.11/site-packages/psycopg2/__init__.py", line 122, in connect
+backend-1  |     conn = _connect(dsn, connection_factory=connection_factory, **kwasync)
+backend-1  |            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+backend-1  | sqlalchemy.exc.OperationalError: (psycopg2.OperationalError) could not translate host name "db-tunnel" to address: Name or service not known
+backend-1  | 
+backend-1  | (Background on this error at: https://sqlalche.me/e/20/e3q8)

@@ -499,7 +499,11 @@ async function syncServerTime() {
         const before = Date.now();
         const res = await fetch('/api/time');
         const after = Date.now();
-        if (!res.ok) return;
+        if (!res.ok) {
+            console.warn('서버 시간 API 응답 실패:', res.status);
+            document.getElementById('offset-applied-time').textContent = '서버 시간 동기화 실패 (로컬 시간 사용 중)';
+            return;
+        }
         const data = await res.json();
 
         // 네트워크 왕복 절반만큼 보정
@@ -517,6 +521,8 @@ async function syncServerTime() {
             `서버 기준 현재: ${serverTimeStr}`;
     } catch (e) {
         console.error('서버 시간 동기화 실패:', e);
+        document.getElementById('offset-applied-time').textContent = '서버 시간 동기화 실패 (로컬 시간 사용 중)';
+        // 실패해도 시계는 로컬 시간으로 계속 동작 (clientDriftMs = 0 유지)
     }
 }
 
@@ -588,22 +594,39 @@ async function loadSystemStatus() {
         const res = await fetch(`${API_BASE}/api/v1/admin/system-status`, {
             headers: { 'Authorization': `Bearer ${token}` }
         });
-        if (!res.ok) return;
+        if (!res.ok) {
+            const err = await res.json().catch(() => ({}));
+            showToast(`모니터링 조회 실패 (${res.status}): ${err.detail || ''}`, 'error');
+            document.getElementById('stat-db-status').innerHTML =
+                `<span class="badge badge-error">HTTP ${res.status}</span>`;
+            return;
+        }
         const d = await res.json();
 
-        // 주요 지표
-        document.getElementById('stat-completed').textContent = d.enrollments.completed.toLocaleString();
-        document.getElementById('stat-basket').textContent    = d.enrollments.basket.toLocaleString();
-        document.getElementById('stat-canceled').textContent  = d.enrollments.canceled.toLocaleString();
-        document.getElementById('stat-waitlist').textContent  = d.waitlist.waiting.toLocaleString();
-        document.getElementById('stat-students').textContent  = d.total_students.toLocaleString();
-        document.getElementById('stat-lectures').textContent  = d.total_lectures.toLocaleString();
-
-        // DB 상태
+        // DB 오류 상태 우선 처리
         const dbOk = d.db_status === '정상';
         document.getElementById('stat-db-status').innerHTML =
             `<span class="badge ${dbOk ? 'badge-ok' : 'badge-error'}">${d.db_status}</span>`;
-        document.getElementById('stat-db-latency').textContent = `${d.db_latency_ms} ms`;
+        document.getElementById('stat-db-latency').textContent =
+            d.db_latency_ms >= 0 ? `${d.db_latency_ms} ms` : '측정 불가';
+
+        if (!dbOk) {
+            showToast(`DB 상태 오류: ${d.error_detail || '알 수 없음'}`, 'error');
+        }
+
+        // 주요 지표 (안전하게 옵셔널 체이닝)
+        document.getElementById('stat-completed').textContent =
+            (d.enrollments?.completed ?? '-').toLocaleString?.() ?? (d.enrollments?.completed ?? '-');
+        document.getElementById('stat-basket').textContent =
+            (d.enrollments?.basket ?? '-').toLocaleString?.() ?? (d.enrollments?.basket ?? '-');
+        document.getElementById('stat-canceled').textContent =
+            (d.enrollments?.canceled ?? '-').toLocaleString?.() ?? (d.enrollments?.canceled ?? '-');
+        document.getElementById('stat-waitlist').textContent =
+            (d.waitlist?.waiting ?? '-').toLocaleString?.() ?? (d.waitlist?.waiting ?? '-');
+        document.getElementById('stat-students').textContent =
+            (d.total_students ?? '-').toLocaleString?.() ?? (d.total_students ?? '-');
+        document.getElementById('stat-lectures').textContent =
+            (d.total_lectures ?? '-').toLocaleString?.() ?? (d.total_lectures ?? '-');
 
         // 수강신청 활성 상태
         document.getElementById('stat-enrollment-active').innerHTML =
@@ -613,8 +636,10 @@ async function loadSystemStatus() {
 
         // 활성 일차 정보
         if (d.active_day) {
-            const closeKST = new Date(d.active_day.close_datetime)
-                .toLocaleString('ko-KR', { timeZone: 'Asia/Seoul', hour12: false });
+            const closeDt = d.active_day.close_datetime;
+            const closeKST = closeDt
+                ? new Date(closeDt).toLocaleString('ko-KR', { timeZone: 'Asia/Seoul', hour12: false })
+                : '-';
             const restrict = RESTRICTION_LABELS[d.active_day.restriction_type] || d.active_day.restriction_type;
             document.getElementById('stat-active-day').textContent =
                 `${d.active_day.day_number}일차 (${restrict}) — 마감: ${closeKST}`;
@@ -623,7 +648,7 @@ async function loadSystemStatus() {
         }
 
         document.getElementById('stat-waitlist-promoted').textContent =
-            `${d.waitlist.promoted.toLocaleString()} 건`;
+            `${(d.waitlist?.promoted ?? 0).toLocaleString()} 건`;
 
         // 최근 신청 5건 테이블
         const tbody = document.getElementById('recent-tbody');
@@ -639,9 +664,9 @@ async function loadSystemStatus() {
                             : e.status === 'CANCELED'  ? 'badge-error'
                             : 'badge-basket';
                 return `<tr>
-                    <td>${e.enroll_no}</td>
-                    <td>${e.user_id}</td>
-                    <td>${e.lecture_id}</td>
+                    <td>${e.enroll_no ?? '-'}</td>
+                    <td>${e.user_id ?? '-'}</td>
+                    <td>${e.lecture_id ?? '-'}</td>
                     <td><span class="badge ${cls}">${label}</span></td>
                     <td>${timeStr}</td>
                 </tr>`;
@@ -652,6 +677,10 @@ async function loadSystemStatus() {
             `마지막 갱신: ${new Date().toLocaleTimeString('ko-KR', { hour12: false })}`;
     } catch (e) {
         console.error('시스템 상태 로드 실패:', e);
+        document.getElementById('stat-db-status').innerHTML =
+            `<span class="badge badge-error">연결 실패</span>`;
+        document.getElementById('stat-db-latency').textContent = '측정 불가';
+        showToast('서버 연결 오류 — 모니터링 데이터를 가져올 수 없습니다.', 'error');
     }
 }
 
