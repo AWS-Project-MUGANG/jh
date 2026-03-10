@@ -205,10 +205,6 @@
     {
       "name": "depart",
       "type": "VARCHAR(255)"
-    },
-    {
-      "name": "office_tel",
-      "type": "VARCHAR(50)"
     }
   ],
   "grades": [

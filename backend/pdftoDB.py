@@ -150,7 +150,7 @@ def main():
     for college, dept in data:
         existing = db.query(models.Depart).filter(models.Depart.depart == dept).first()
         if not existing:
-            db.add(models.Depart(college=college, depart=dept, office_tel="000-0000"))
+            db.add(models.Depart(college=college, depart=dept))
             inserted += 1
 
     db.commit()

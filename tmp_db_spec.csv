@@ -1,0 +1,96 @@
+0,1,2,3,4,5,6
+S,,,,,,
+,DB 테이블 명세서,,,,,
+,,,,,,
+,,,,,,
+,DB명,mugang,,,테이블 명,depart_tb
+,,,,,테이블 설명,단과대학 정보
+,,,,,,
+,순번,칼럼명,데이터 타입,제약 조건,,비즈니스 로직
+,1,dept_no,BIGSERIAL,PRIMARY KEY,,학과 고유 코드
+,2,college,VARCHAR(50),"NOT NULL, FK",,단과대 명 (예: 공과대학)
+,3,depart,VARCHAR(255),"NOT NULL, FK",,학과 명 (예: 컴퓨터공학과)
+,4,office_tel,VARCHAR(50),NULLABLE,,학과 사무실 연락처 (교직원 관리용)
+,*데이터 무결성떄문에 추가.,,,,,
+,**전화번호는 varchar로 해야 첫번쨰자리에 0이 올 수 있음,,,,,
+,,,,,,
+,,,,,,
+,DB명,mugang,,,테이블 명,user_tb
+,,,,,테이블 설명,사용자 정보
+,,,,,,
+,순번,칼럼명,데이터 타입,제약 조건,,비즈니스 로직
+,1,user_no,BIGSERIAL,PRIMARY KEY,,자동 증가하는 고유 번호
+,2,loginid,VARCHAR(50),UNIQUE,,"로그인 ID (학생은 학번, 교직원은 사번)"
+,3,password,VARCHAR(255),NOT NULL,,Spring Security (BCrypt)로 암호화된 비밀번호
+,4,role,ENUM,NOT NULL,,권한 (STUDENT 또는 STAFF)
+,5,user_name,VARCHAR(50),NOT NULL,,실명
+,6,dept_no,,FK,,
+,8,grade,INTEGER,NULLABLE,,학년(해 바뀌면 자동으로 올라가도록)
+,9,user_status,ENUM,DEFAULT 재학,,"재학 상태 (재학, 휴학, 재직-교직원용  등)"
+,10,createdat,TIMESTAMP,DEFAULT CURRENT_TIMESTAMP,,생성 일자
+,"*교직원은 소속 단과대학, 학과, 학년이 없기 떄문에 null 허용",,,,,
+,,,,,,
+,,,,,,
+,,,,,,
+,DB명,mugang,,,테이블 명,lecture_tb
+,,,,,테이블 설명,개설된 수강과목 테이블
+,,,,,,
+,순번,칼럼명,데이터 타입,제약 조건,,비즈니스 로직
+,1,lecture_id,BIGSERIAL,PRIMARY KEY,,시스템 고유 식별자 (PK)
+,2,course_no,INTEGER,NOT NULL,,"수강번호 (3388, 3389 등"
+,3,college,VARCHAR(50),"NOT NULL, FK",,개설 단과대학
+,4,department,VARCHAR(50),"NOT NULL, FK",,"개설 학과, 수강 학과"
+,5,subject,VARCHAR(100),NOT NULL,,교과목명
+,6,classroom,VARCHAR(50),"NOT NULL, FK",,강의실 정보 - 예: 인문1관-1320
+,7,lec_grade,ENUM,NOT NULL,,"권장 대상 학년 (1, 2, 3, 4)"
+,8,credit,INTEGER,NOT NULL,,부여 학점
+,9,professor,VARCHAR(50),NOT NULL,,담당 교수
+,10,type,ENUM,NOT NULL,,"이수 구분 (전공필수, 전공선택, 교양필수, 교양선택)"
+,11,capacity,INTEGER,DEFAULT 0,,수강 제한 인원 (최대 정원)
+,12,count,INTEGER,DEFAULT 0,,현재 신청 완료된 인원
+,13,version,INTEGER,DEFAULT 0,,"낙관적 락(Optimistic Lock), 수강신청 중복방지"
+,,,,,,
+,*학부생이 AI한테 시간표 구성 요청 용 ,,,,,
+,**[핵심] 현재 신청 완료된 인원. 수강신청 시 이 값을 확인하여 capacity를 넘지 않도록 트랜잭션 처리함,,,,,
+,"***version컬럼 주의사항: JPA 사용 시: 엔티티 객체의 version 필드 위에 @Version 어노테이션만 붙여주면 됩니다. 그러면 JPA가 UPDATE 쿼리를 날릴 때 자동으로 버전 체크 로직을 추가해 줍니다.
+
+MyBatis/SQL 사용 시: UPDATE 문에 직접 조건을 추가해야 합니다.",,,,,
+,,,,,,
+,DB명,mugang,,,테이블 명,enroll_tb
+,,,,,테이블 설명,"수강신청 내역, 시간표 정보"
+,,,,,,
+,순번,칼럼명,데이터 타입,제약 조건,,비즈니스 로직
+,1,enroll_no,BIGSERIAL,PRIMARY KEY,,자동 증가하는 고유 번호
+,2,loginid,BIGINT,"NOT NULL, FK, UK",,"user_tb의 loginid, 신청자 ID"
+,3,lecture_id,BIGINT,"NOT NULL, FK, UK",,"course_tb의 courseno, 강의 자동증가 고유 번호"
+,4,sche_no,BIGINT,"NOT NULL, FK",,"강의 시간, schedule_tb 참조키"
+,5,enroll_status,ENUM,NOT NULL,,"성공 COMPLETED, 취소 CANCELED, 장바구니 BASKET"
+,6,createdat,TIMESTAMP,DEFAULT CURRENT_TIMESTAMP,,생성 일자
+,,,,,,
+,,,,,,
+,,,,,,
+,,,,,,
+,DB명,mugang,,,테이블 명,overenroll_tb
+,,,,,테이블 설명,강의 정원 예외 학부생 승인
+,,,,,,
+,순번,칼럼명,데이터 타입,제약 조건,,비즈니스 로직
+,1,over_no,BIGSERIAL,PRIMARY KEY,,자동 증가하는 고유 번호
+,2,user_no,BIGINT,"NOT NULL, FK, UK",,"서류를 제출한 학생, user_tb"
+,3,lecture_id,BIGINT,"NOT NULL, FK, UK",,신청한 강의 번호 (course_tb)
+,4,sche_no,BIGINT,"NOT NULL, FK",,서류를 확인하고 승인한 교직원 번호
+,5,reason,VARCHAR(255),NULLABLE,,"사유 (예: 졸업 예정자, 필수 전공 등)"
+,6,loginid,VARCHAR(50),NOT NULL,,"로그인 ID (학생은 학번, 교직원은 사번),  user_tb"
+,,,,,,
+,,,,,,
+,,,,,,
+,DB명,mugang,,,테이블 명,schedule_tb
+,,,,,테이블 설명,강의 시간
+,,,,,,
+,순번,칼럼명,데이터 타입,제약 조건,,비즈니스 로직
+,1,sche_no,BIGSERIAL,PRIMARY KEY,,자동 증가하는 고유 번호
+,2,lecture_id,BIGINT,FK,,course_tb 참조
+,3,day_of_week,CHAR(1),NOT NULL,,요일
+,4,start_time,TIME,NOT NULL,,시작 시간
+,5,end_tim,TIME,NOT NULL,,종료 시간
+,6,classroom,VARCHAR(50),NOT NULL,,강의실 정보 - 예: 인문1관-1320
+,"*time_no 참조: time_no가 schedule 테이블을 참조하는 외래키(FK)인데, 보통 한 과목이 여러 시간에 걸쳐 수업할 수 있으므로(예: 월3, 수4) 관계 설정에 유의해야 합니다.",,,,,

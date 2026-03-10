@@ -1,0 +1,44 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mugang-backend
+  labels:
+    app: backend
+spec:
+  replicas: 2 # 무중단 고가용성을 위해 2개의 파드(인스턴스) 구동
+  selector:
+    matchLabels:
+      app: backend
+  template:
+    metadata:
+      labels:
+        app: backend
+    spec:
+      containers:
+      - name: backend
+        image: 123456789012.dkr.ecr.ap-northeast-2.amazonaws.com/mugang-backend:latest # 임시 ECR 주소
+        ports:
+        - containerPort: 8000
+        env:
+        - name: DATABASE_URL
+          value: "postgresql://user:password@rds-endpoint.amazonaws.com:5432/mugangdb"
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "250m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: backend-service
+spec:
+  type: ClusterIP # 내부 통신 전용 (보안)
+  selector:
+    app: backend
+  ports:
+    - protocol: TCP
+      port: 8000
+      targetPort: 8000

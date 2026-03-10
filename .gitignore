@@ -1,5 +1,11 @@
 # Environments
 .env
+.env.*
+!.env.example
+!.env.sample
+backend/.env
+backend/.env.*
+!backend/.env.example
 
 # Keys and Secrets
 *.pem
@@ -41,3 +47,12 @@ venv.bak/
 # SQLite
 *.sqlite3
 *.db
+
+# Local DB data
+pgdata/
+db_data/
+.dbdata/
+
+# Local docker-compose overrides
+docker-compose.override.yml
+docker-compose.local.yml

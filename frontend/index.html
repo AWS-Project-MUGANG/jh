@@ -1,14 +1,18 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="ko">
 
 <head>
     <meta charset="UTF-8">
-    <meta http-equiv="refresh" content="0; url=pages/auth/login.html">
-    <title>무강대학교 학사행정 서비스</title>
+    <script>
+        // Preserve current origin (including port) when redirecting.
+        var origin = window.location.origin;
+        location.replace(origin + "/pages/auth/login.html");
+    </script>
+    <title>무강 AI 상담 일정 서비스</title>
 </head>
 
 <body>
-    <p>로그인 페이지로 이동합니다... <a href="pages/auth/login.html">이동하지 않는 경우 여기를 클릭하세요.</a></p>
+    <p>로그인 페이지로 이동합니다. <a href="/pages/auth/login.html">이동하지 않는 경우 여기를 클릭하세요.</a></p>
 </body>
 
 </html>

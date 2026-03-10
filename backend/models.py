@@ -12,7 +12,6 @@ class Depart(Base):
     dept_no = Column(BigInteger, primary_key=True, autoincrement=True)
     college = Column(String(50), nullable=False)
     depart = Column(String(255), nullable=False)
-    office_tel = Column(String(50), nullable=False)
 
 
 class User(Base):
@@ -86,6 +85,20 @@ class Enrollment(Base):
 
     lecture = relationship("Lecture", back_populates="enrollments")
     user = relationship("User", foreign_keys=[user_id])
+
+
+class OverEnroll(Base):
+    __tablename__ = "overenroll_tb"
+
+    over_no = Column(BigInteger, primary_key=True, autoincrement=True)
+    user_no = Column(BigInteger, ForeignKey("user_tb.user_no", ondelete="CASCADE"))
+    lecture_id = Column(BigInteger, ForeignKey("lecture_tb.lecture_id", ondelete="CASCADE"))
+    sche_no = Column(BigInteger, ForeignKey("schedule_tb.sche_no", ondelete="SET NULL"), nullable=True)
+    reason = Column(String(255), nullable=True)
+    loginid = Column(String(50), nullable=False)
+
+    user = relationship("User", foreign_keys=[user_no])
+    lecture = relationship("Lecture")
 
 
 class Grade(Base):
