@@ -27,6 +27,15 @@ resource "aws_subnet" "public_sub" {
 #   tags = { Name = "mugang-public-sub-2" }
 # }
 
+# Public Subnet 2 (ALB 구성을 위해 최소 2개 AZ 필요)
+resource "aws_subnet" "public_sub_2" {
+  vpc_id                  = aws_vpc.mugang_vpc.id
+  cidr_block              = "10.0.10.0/24"
+  map_public_ip_on_launch = true
+  availability_zone       = "ap-northeast-2c"
+  tags = { Name = "mugang-public-sub-2" }
+}
+
 # Private Subnet (RDS용 - 최소 2개 필요)
 resource "aws_subnet" "private_sub_1" {
   vpc_id            = aws_vpc.mugang_vpc.id
@@ -175,6 +184,17 @@ resource "aws_instance" "app_server" {
   subnet_id              = aws_subnet.private_sub_1.id
   vpc_security_group_ids = [aws_security_group.app_sg.id]
   key_name               = var.key_name
+
+  user_data = <<-EOF
+              #!/bin/bash
+              yum update -y
+              yum install -y docker
+              service docker start
+              usermod -a -G docker ec2-user
+              chkconfig docker on
+              curl -L https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m) -o /usr/local/bin/docker-compose
+              chmod +x /usr/local/bin/docker-compose
+              EOF
 
   tags = { Name = "mugang-app-server" }
 }
