@@ -7,6 +7,9 @@ module "eks" {
 
   cluster_endpoint_public_access = true
 
+  # 리소스 삭제 시 KMS 키 보존 기간 최소화 (7일)
+  kms_key_deletion_window_in_days = 7
+
   vpc_id                   = module.vpc.vpc_id
   subnet_ids               = module.vpc.private_subnets
   control_plane_subnet_ids = module.vpc.private_subnets
