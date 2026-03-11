@@ -24,6 +24,7 @@ import pdfplumber
 import re
 import tempfile
 import boto3
+from botocore.config import Config
 
 # DB 연동
 from database import engine, get_db, Base
@@ -260,7 +261,8 @@ def get_embedding(text: str) -> List[float]:
     """AWS Bedrock Titan 모델을 사용하여 텍스트 임베딩 생성 (1536차원)"""
     try:
         # 리전은 서울(ap-northeast-2) 또는 버지니아(us-east-1) 사용
-        bedrock = boto3.client(service_name='bedrock-runtime', region_name='us-east-1')
+        config = Config(connect_timeout=5, read_timeout=30)
+        bedrock = boto3.client(service_name='bedrock-runtime', region_name='us-east-1', config=config)
         
         body = json.dumps({"inputText": text})
         response = bedrock.invoke_model(
@@ -1462,21 +1464,6 @@ async def upload_rag_document(
     except Exception as e:
         logger.error(f"RAG Upload Failed: {e}")
         raise HTTPException(status_code=500, detail="문서 처리 중 오류가 발생했습니다.")
-def upload_rag_document(req: RAGUploadRequest, db: Session = Depends(get_db)):
-    """관리자용: AI 학사 규정 문서 업로드 (notice_tb 저장)"""
-    # 현재 스키마에는 RAG 전용 테이블이 없어 notice_tb를 지식베이스 저장소로 재사용한다.
-    new_notice = models.Notice(
-        title=f"[RAG] {req.title}",
-        content=req.content,
-        author_id=None
-    )
-    db.add(new_notice)
-    db.commit()
-    db.refresh(new_notice)
-    return {
-        "message": f"'{req.title}' 항목이 AI 학사 규정 저장소에 등록되었습니다.",
-        "id": new_notice.id
-    }
 
 
 # --- 공지사항 ---
