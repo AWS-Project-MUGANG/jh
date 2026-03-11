@@ -58,10 +58,9 @@
           <input type="text" id="rag-title" placeholder="예: 2026학년도 통학버스 및 기숙사 셔틀 운행 개편 안내"
             style="width: 100%; padding: 12px; margin-top: 8px; margin-bottom: 20px; border: 1px solid #ccc; border-radius: 4px; font-size: 1rem;"><br>
 
-          <label style="font-weight: bold; font-size: 1.1rem;">텍스트 데이터 (학습용 Data)</label><br>
-          <textarea id="rag-content" rows="12"
-            placeholder="전체 내용을 이곳에 복사 붙여넣기 하세요. AI가 내용을 형태소 단위로 분리(Chunking)하여 학습합니다..."
-            style="width: 100%; padding: 12px; margin-top: 8px; margin-bottom: 20px; border: 1px solid #ccc; border-radius: 4px; font-size: 1rem; resize: vertical;"></textarea><br>
+          <label style="font-weight: bold; font-size: 1.1rem;">학습할 문서 파일 (PDF/TXT)</label><br>
+          <input type="file" id="rag-file" accept=".pdf,.txt,.csv"
+            style="width: 100%; padding: 12px; margin-top: 8px; margin-bottom: 20px; border: 1px solid #ccc; border-radius: 4px; font-size: 1rem; background: #fff;"><br>
 
           <button class="btn-approve" onclick="submitRag()"
             style="padding: 12px 25px; background: #2e7d32; color: white; font-weight: bold; font-size: 1.1rem; border: none; border-radius: 6px; cursor: pointer; display: block; width: 100%; transition: background 0.3s;">
@@ -91,31 +90,43 @@
 
     async function submitRag() {
       const title = document.getElementById('rag-title').value;
-      const content = document.getElementById('rag-content').value;
+      const fileInput = document.getElementById('rag-file');
 
-      if (!title || !content) {
-        alert("⚠️ 제목과 내용을 모두 입력해주세요!");
+      if (!title || fileInput.files.length === 0) {
+        alert("⚠️ 제목과 파일을 모두 선택해주세요!");
         return;
       }
+
+      const formData = new FormData();
+      formData.append('title', title);
+      formData.append('file', fileInput.files[0]);
+
+      const btn = document.querySelector('.btn-approve');
+      const originalText = btn.innerText;
+      btn.innerText = "문서 분석 및 임베딩 중...";
+      btn.disabled = true;
 
       try {
         const res = await fetch('/api/v1/admin/rag/upload', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ title: title, content: content })
+          body: formData
         });
 
         if (res.ok) {
           const data = await res.json();
           alert("✅ 성공 메세지: \n" + data.message);
           document.getElementById('rag-title').value = '';
-          document.getElementById('rag-content').value = '';
+          fileInput.value = '';
         } else {
-          alert("업로드 중 서버 오류가 발생했습니다.");
+          const err = await res.json();
+          alert("오류 발생: " + (err.detail || "업로드 실패"));
         }
       } catch (e) {
         console.error(e);
         alert("통신 에러가 발생했습니다.");
+      } finally {
+        btn.innerText = originalText;
+        btn.disabled = false;
       }
     }
 
