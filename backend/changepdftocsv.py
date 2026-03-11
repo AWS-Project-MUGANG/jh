@@ -334,21 +334,37 @@ if __name__ == "__main__":
         f for f in os.listdir(BASE_DIR)
         if f.endswith('.pdf') and 'lecture' in f
     ])
+    # 1. PDF 파일 찾기 (backend 폴더 우선, 없으면 상위 pdf 폴더 검색)
+    search_dirs = [BASE_DIR, os.path.join(os.path.dirname(BASE_DIR), "pdf")]
+    pdf_files = []
+
+    for d in search_dirs:
+        if os.path.exists(d):
+            files = [os.path.join(d, f) for f in os.listdir(d) if f.endswith('.pdf')]
+            if files:
+                pdf_files = sorted(files)
+                print(f"📁 '{d}' 경로에서 {len(pdf_files)}개의 PDF 파일을 찾았습니다.")
+                break
 
     if not pdf_files:
         print("처리할 PDF 파일이 없습니다.")
+        print(f"❌ PDF 파일을 찾을 수 없습니다. 검색 경로: {search_dirs}")
         exit(1)
+
+    # 2. DB 연결 설정 (로컬 Docker 실행 기준: localhost)
+    # Docker 내부에서 실행 시: postgresql://mugang:mugang@db:5432/mugang
+    # 로컬 터미널에서 실행 시: postgresql://mugang:mugang@localhost:5432/mugang
+    db_url = os.getenv("DATABASE_URL", "postgresql://mugang:mugang@localhost:5432/mugang")
 
     all_lectures = []
     all_schedules = []
 
-    for pdf_file in pdf_files:
-        pdf_path = os.path.join(BASE_DIR, pdf_file)
+    for pdf_path in pdf_files:
         lecture_df, schedule_df = process_pdf_to_csv_and_db(
             pdf_path=pdf_path,
             output_dir=OUTPUT_DIR,
-            db_url=None,
-            save_csv=False
+            db_url=db_url,
+            save_csv=True
         )
         all_lectures.append(lecture_df)
         all_schedules.append(schedule_df)
