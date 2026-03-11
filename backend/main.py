@@ -277,6 +277,34 @@ def get_embedding(text: str) -> List[float]:
         logger.error(f"Bedrock Embedding Error: {e}")
         return []
 
+def generate_answer_with_bedrock(query: str, context: str) -> str:
+    """AWS Bedrock(Claude)을 사용하여 검색된 문맥 기반 답변 생성"""
+    try:
+        config = Config(connect_timeout=5, read_timeout=60)
+        bedrock = boto3.client(service_name='bedrock-runtime', region_name='us-east-1', config=config)
+
+        # Claude v2/v2.1 프롬프트
+        prompt = f"\n\nHuman: 당신은 대학교 학사 행정 AI 어시스턴트입니다. 다음의 [참고 문서] 내용을 바탕으로 사용자의 [질문]에 대해 정확하고 친절하게 답변해주세요. 문서에 없는 내용은 지어내지 말고, 정보가 부족하면 모른다고 답하세요.\n\n[참고 문서]\n{context}\n\n[질문]\n{query}\n\nAssistant:"
+
+        body = json.dumps({
+            "prompt": prompt,
+            "max_tokens_to_sample": 1000,
+            "temperature": 0.1,  # 사실 기반 답변을 위해 낮춤
+            "top_p": 0.9
+        })
+
+        response = bedrock.invoke_model(
+            modelId="anthropic.claude-v2", 
+            contentType="application/json",
+            accept="application/json",
+            body=body
+        )
+        response_body = json.loads(response.get("body").read())
+        return response_body.get("completion")
+    except Exception as e:
+        logger.error(f"Bedrock Generation Error: {e}")
+        return None
+
 # ---- API 라우터 ----
 
 @app.get("/api/health")
@@ -1283,7 +1311,32 @@ def chat_ask(req: ChatRequest, db: Session = Depends(get_db)):
     reply_text = "질문하신 내용에 대해 현재 확인 중입니다. 학사지원팀에 문의해주세요."
     source_info = []
 
-    if "수강신청" in user_msg or "장바구니" in user_msg:
+    # 1. RAG 벡터 검색 우선 수행 (업로드된 매뉴얼 내용 확인)
+    query_vector = get_embedding(user_msg)
+    rag_docs = []
+    
+    if query_vector:
+        # 유사도 검색 (상위 3개)
+        rag_docs = db.query(models.RagDocument).order_by(
+            models.RagDocument.embedding.l2_distance(query_vector)
+        ).limit(3).all()
+
+    # 2. 검색 결과가 있으면 LLM으로 답변 생성
+    if rag_docs:
+        context_text = "\n\n".join([f"제목: {d.title}\n내용: {d.content}" for d in rag_docs])
+        generated_answer = generate_answer_with_bedrock(user_msg, context_text)
+        
+        if generated_answer:
+            reply_text = generated_answer
+            source_info = [{"title": d.title, "url": "#rag"} for d in rag_docs]
+        else:
+            # 생성 실패 시 원문 일부 반환
+            doc = rag_docs[0]
+            reply_text = f"[AI 검색 결과] 관련 내용을 찾았습니다:\n\n{doc.content[:300]}...\n\n(상세 내용은 학사 매뉴얼을 확인해주세요.)"
+            source_info = [{"title": d.title, "url": "#rag"} for d in rag_docs]
+
+    # 3. 검색 결과가 없을 때만 기존 하드코딩 규칙 적용 (Fallback)
+    elif "수강신청" in user_msg or "장바구니" in user_msg:
         reply_text = "수강신청은 좌측 '수강 신청' 메뉴에서 진행하실 수 있습니다. 장바구니에 담은 후 정해진 기간 내에 최종 신청을 완료해야 합니다."
         source_info = [{"title": "학사 규정: 제20조 수강신청", "url": "#sugang"}]
     elif "휴학" in user_msg or "군휴학" in user_msg:
@@ -1303,22 +1356,7 @@ def chat_ask(req: ChatRequest, db: Session = Depends(get_db)):
         reply_text = "졸업을 위해서는 130학점 이상 이수와 필수 전공/교양 과목을 모두 들어야 하며, 졸업 논문 혹은 대체 자격증(토익 800점 등)을 제출하셔야 합니다."
         source_info = [{"title": "총칙: 졸업 요건 규정", "url": "#graduation"}]
     else:
-        # 벡터 검색 (Vector Search) 수행
-        query_vector = get_embedding(user_msg)
-        rag_docs = []
-        
-        if query_vector:
-            # L2 거리(유클리드 거리)가 가까운 순서대로 상위 3개 조회
-            rag_docs = db.query(models.RagDocument).order_by(
-                models.RagDocument.embedding.l2_distance(query_vector)
-            ).limit(3).all()
-
-        if rag_docs:
-            doc = rag_docs[0] # 가장 유사한 문서
-            reply_text = f"[AI 검색 결과] 관련 규정('{doc.title}')을 찾았습니다:\n\n{doc.content[:200]}...\n\n(더 자세한 내용은 학사 공지를 참고하세요)"
-            source_info = [{"title": d.title, "url": "#rag"} for d in rag_docs]
-        else:
-            reply_text = "죄송합니다. 질문하신 내용과 관련된 학사 규정을 찾을 수 없습니다."
+        reply_text = "죄송합니다. 질문하신 내용과 관련된 학사 규정을 찾을 수 없습니다. (2026 학생 매뉴얼을 업로드하면 답변이 가능합니다)"
 
     db.add(models.ChatMessage(session_id=req.session_id, role="assistant", content=reply_text))
     db.commit()
