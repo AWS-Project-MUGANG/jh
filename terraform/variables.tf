@@ -27,8 +27,20 @@ variable "cluster_name" {
   default     = "mugang-eks"
 }
 
-variable "image_tag" {
-  description = "ECR에 푸시된 Docker 이미지 태그 (GitHub Actions에서 커밋 SHA로 주입)"
+variable "blue_image_tag" {
+  description = "Blue 환경 Docker 이미지 태그"
   type        = string
   default     = "latest"
+}
+
+variable "green_image_tag" {
+  description = "Green 환경 Docker 이미지 태그"
+  type        = string
+  default     = "latest"
+}
+
+variable "active_color" {
+  description = "현재 라이브 환경 (blue 또는 green)"
+  type        = string
+  default     = "blue"
 }

@@ -1,34 +1,31 @@
-name: Deploy to Amazon ECR and EC2
+name: Blue-Green Deploy to ECR & EC2
 
 on:
   push:
     branches:
-      - main # 메인 브랜치에 코드가 푸시되면 자동 실행
+      - main
 
 env:
-  AWS_REGION: ap-northeast-2 # 서울 리전
+  AWS_REGION: ap-northeast-2
   ECR_FRONTEND_REPOSITORY: mugang-frontend
   ECR_BACKEND_REPOSITORY: mugang-backend
 
 jobs:
   # ────────────────────────────────────────────────────────────────────────────
-  # Job 1: Docker 이미지 빌드 → ECR 푸시
+  # Job 1: 이미지 빌드 → ECR 푸시
   # ────────────────────────────────────────────────────────────────────────────
   build-and-push:
     runs-on: ubuntu-latest
     outputs:
       image_tag: ${{ steps.set-tag.outputs.image_tag }}
-      ecr_registry: ${{ steps.login-ecr.outputs.registry }}
 
     steps:
-    - name: Checkout Source Code
-      uses: actions/checkout@v4
+    - uses: actions/checkout@v4
 
-    - name: Set Image Tag (commit SHA)
+    - name: Set Image Tag (commit SHA 앞 8자리)
       id: set-tag
       run: echo "image_tag=${GITHUB_SHA::8}" >> $GITHUB_OUTPUT
 
-    # 1. AWS 자격 증명
     - name: Configure AWS credentials
       uses: aws-actions/configure-aws-credentials@v4
       with:
@@ -36,12 +33,10 @@ jobs:
         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         aws-region: ${{ env.AWS_REGION }}
 
-    # 2. Amazon ECR 로그인
     - name: Login to Amazon ECR
       id: login-ecr
       uses: aws-actions/amazon-ecr-login@v2
 
-    # 3. 프론트엔드 이미지 빌드 & ECR 푸시
     - name: Build and Push Frontend Image
       env:
         ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
@@ -50,7 +45,6 @@ jobs:
         docker build -t $ECR_REGISTRY/$ECR_FRONTEND_REPOSITORY:$IMAGE_TAG ./frontend
         docker push $ECR_REGISTRY/$ECR_FRONTEND_REPOSITORY:$IMAGE_TAG
 
-    # 4. 백엔드 이미지 빌드 & ECR 푸시
     - name: Build and Push Backend Image
       env:
         ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
@@ -60,15 +54,15 @@ jobs:
         docker push $ECR_REGISTRY/$ECR_BACKEND_REPOSITORY:$IMAGE_TAG
 
   # ────────────────────────────────────────────────────────────────────────────
-  # Job 2: Terraform apply → EC2 user_data로 최신 이미지 배포
+  # Job 2: 블루-그린 배포
+  # 순서: Inactive 환경에 새 이미지 배포 → 헬스체크 → ALB 전환
   # ────────────────────────────────────────────────────────────────────────────
-  terraform-deploy:
+  blue-green-deploy:
     runs-on: ubuntu-latest
-    needs: build-and-push # ECR 푸시 완료 후 실행
+    needs: build-and-push
 
     steps:
-    - name: Checkout Source Code
-      uses: actions/checkout@v4
+    - uses: actions/checkout@v4
 
     - name: Configure AWS credentials
       uses: aws-actions/configure-aws-credentials@v4
@@ -77,13 +71,12 @@ jobs:
         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         aws-region: ${{ env.AWS_REGION }}
 
-    # 5. Terraform 설치
     - name: Setup Terraform
       uses: hashicorp/setup-terraform@v3
       with:
         terraform_version: "~1.7"
+        terraform_wrapper: false  # output 파싱을 위해 wrapper 비활성화
 
-    # 6. Terraform 초기화 (S3 백엔드 사용)
     - name: Terraform Init
       working-directory: terraform
       run: |
@@ -92,20 +85,74 @@ jobs:
           -backend-config="key=mugang/terraform.tfstate" \
           -backend-config="region=${{ env.AWS_REGION }}"
 
-    # 7. Terraform Plan (변경 사항 확인)
-    - name: Terraform Plan
+    # ── Step 1: 현재 active 색 읽기 ──────────────────────────────────────────
+    - name: Get Current Active Color
+      id: colors
       working-directory: terraform
       env:
-        TF_VAR_image_tag: ${{ needs.build-and-push.outputs.image_tag }}
         TF_VAR_db_password: ${{ secrets.DB_PASSWORD }}
         TF_VAR_key_name: ${{ secrets.EC2_KEY_NAME }}
-      run: terraform plan -out=tfplan
+      run: |
+        ACTIVE=$(terraform output -raw active_color 2>/dev/null || echo "blue")
+        if [ "$ACTIVE" = "blue" ]; then
+          INACTIVE="green"
+        else
+          INACTIVE="blue"
+        fi
+        echo "active=$ACTIVE"     >> $GITHUB_OUTPUT
+        echo "inactive=$INACTIVE" >> $GITHUB_OUTPUT
+        echo "현재 라이브: $ACTIVE  /  배포 대상: $INACTIVE"
 
-    # 8. Terraform Apply (EC2 인스턴스를 user_data로 재생성하여 최신 이미지 배포)
-    - name: Terraform Apply
+    # ── Step 2: Inactive 환경에 새 이미지 배포 (인스턴스 교체) ──────────────
+    - name: Deploy New Image to Inactive (${{ steps.colors.outputs.inactive }})
       working-directory: terraform
       env:
-        TF_VAR_image_tag: ${{ needs.build-and-push.outputs.image_tag }}
         TF_VAR_db_password: ${{ secrets.DB_PASSWORD }}
         TF_VAR_key_name: ${{ secrets.EC2_KEY_NAME }}
-      run: terraform apply -auto-approve tfplan
+        TF_VAR_active_color: ${{ steps.colors.outputs.active }}
+        # Inactive 색에만 새 태그 적용, Active 색은 현행 유지(latest)
+        TF_VAR_blue_image_tag:  ${{ steps.colors.outputs.inactive == 'blue'  && needs.build-and-push.outputs.image_tag || 'latest' }}
+        TF_VAR_green_image_tag: ${{ steps.colors.outputs.inactive == 'green' && needs.build-and-push.outputs.image_tag || 'latest' }}
+      run: terraform apply -auto-approve
+
+    # ── Step 3: Inactive Target Group 헬스체크 (최대 5분 대기) ──────────────
+    - name: Health Check — ${{ steps.colors.outputs.inactive }} Target Group
+      env:
+        INACTIVE_COLOR: ${{ steps.colors.outputs.inactive }}
+      run: |
+        TG_ARN=$(aws elbv2 describe-target-groups \
+          --names "mugang-${INACTIVE_COLOR}-tg" \
+          --query 'TargetGroups[0].TargetGroupArn' \
+          --output text)
+
+        echo "Target Group: mugang-${INACTIVE_COLOR}-tg"
+        echo "헬스체크 대기 중 (최대 5분)..."
+
+        for i in $(seq 1 30); do
+          HEALTH=$(aws elbv2 describe-target-health \
+            --target-group-arn "$TG_ARN" \
+            --query 'TargetHealthDescriptions[0].TargetHealth.State' \
+            --output text 2>/dev/null || echo "unknown")
+          echo "  [${i}/30] 상태: $HEALTH"
+          if [ "$HEALTH" = "healthy" ]; then
+            echo "헬스체크 통과!"
+            exit 0
+          fi
+          sleep 10
+        done
+
+        echo "헬스체크 실패 — 배포를 중단합니다."
+        exit 1
+
+    # ── Step 4: ALB 리스너를 Inactive(새 환경)으로 전환 ─────────────────────
+    - name: Switch ALB → ${{ steps.colors.outputs.inactive }} (라이브 전환)
+      working-directory: terraform
+      env:
+        TF_VAR_db_password: ${{ secrets.DB_PASSWORD }}
+        TF_VAR_key_name: ${{ secrets.EC2_KEY_NAME }}
+        TF_VAR_active_color: ${{ steps.colors.outputs.inactive }}
+        TF_VAR_blue_image_tag:  ${{ steps.colors.outputs.inactive == 'blue'  && needs.build-and-push.outputs.image_tag || 'latest' }}
+        TF_VAR_green_image_tag: ${{ steps.colors.outputs.inactive == 'green' && needs.build-and-push.outputs.image_tag || 'latest' }}
+      run: |
+        terraform apply -auto-approve
+        echo "배포 완료: ${{ steps.colors.outputs.inactive }} 환경이 라이브입니다."

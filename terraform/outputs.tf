@@ -24,3 +24,13 @@ output "rds_endpoint" {
   description = "The endpoint for the RDS instance"
   value       = aws_db_instance.postgres_db.address
 }
+
+output "active_color" {
+  description = "현재 라이브 환경 색 (blue 또는 green)"
+  value       = var.active_color
+}
+
+output "inactive_color" {
+  description = "현재 대기 환경 색 (다음 배포 대상)"
+  value       = local.inactive_color
+}
