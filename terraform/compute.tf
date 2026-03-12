@@ -27,6 +27,7 @@ resource "aws_instance" "proxy" {
 
     apt-get update -y
     apt-get install -y nginx
+    rm -f /etc/nginx/sites-enabled/default
     systemctl enable nginx
 
     # upstream 전환 스크립트 생성 (GitHub Actions가 SSM으로 호출)
