@@ -101,7 +101,19 @@ jobs:
         echo "inactive=$INACTIVE" >> $GITHUB_OUTPUT
         echo "현재 라이브: $ACTIVE  /  배포 대상: $INACTIVE"
 
-    # ── Step 2: Inactive ASG에 새 이미지 배포 (desired 0 → 1) ────────────────
+    # ── Step 2: Inactive ASG 스케일다운(0) → 새 이미지 적용 → 스케일업(1) ──────
+    - name: Scale Down Inactive ASG to 0 (${{ steps.colors.outputs.inactive }})
+      working-directory: terraform
+      env:
+        TF_VAR_db_password: ${{ secrets.DB_PASSWORD }}
+        TF_VAR_key_name: ${{ secrets.EC2_KEY_NAME }}
+        TF_VAR_active_color: ${{ steps.colors.outputs.active }}
+        TF_VAR_blue_desired:  ${{ steps.colors.outputs.inactive == 'blue'  && '0' || '1' }}
+        TF_VAR_green_desired: ${{ steps.colors.outputs.inactive == 'green' && '0' || '1' }}
+        TF_VAR_blue_image_tag:  ${{ steps.colors.outputs.inactive == 'blue'  && needs.build-and-push.outputs.image_tag || 'latest' }}
+        TF_VAR_green_image_tag: ${{ steps.colors.outputs.inactive == 'green' && needs.build-and-push.outputs.image_tag || 'latest' }}
+      run: terraform apply -auto-approve
+
     - name: Deploy New Image to Inactive (${{ steps.colors.outputs.inactive }})
       working-directory: terraform
       env:
