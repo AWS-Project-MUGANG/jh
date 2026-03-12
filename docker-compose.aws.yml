@@ -1,28 +1,12 @@
-﻿services:
-  db-tunnel:
-    build:
-      context: ./db-tunnel
-      dockerfile: Dockerfile
-    volumes:
-      - ./mugang-key.pem:/tmp/key/mugang-key.pem:ro
-    command: >
-      sh -c "cp /tmp/key/mugang-key.pem /root/key.pem &&
-             chmod 400 /root/key.pem &&
-             exec ssh -o StrictHostKeyChecking=no -i /root/key.pem -N -L 0.0.0.0:5432:terraform-20260303070103185000000001.cba8sagacwbn.ap-northeast-2.rds.amazonaws.com:5432 ec2-user@3.34.141.17"
-    ports:
-      - "5432:5432"
-    restart: unless-stopped
-
+services:
   backend:
     build:
       context: ./backend
       dockerfile: Dockerfile
+    env_file:
+      - ./backend/.env
     ports:
       - "8000:8000"
-    depends_on:
-      - db-tunnel
-    environment:
-      - DATABASE_URL=postgresql://mugangadmin:!!anrkddl615@db-tunnel:5432/mugang
 
   frontend:
     build:

@@ -5,10 +5,10 @@ module "vpc" {
   name = "mugang-vpc"
   cidr = "10.0.0.0/16"
 
-  # 리소스 개수 최적화(20~23개)를 위해 1개 AZ만 사용
-  azs             = ["ap-northeast-2a"]
-  private_subnets = ["10.0.2.0/24"] # 보안 영역 (EC2, RDS)
-  public_subnets  = ["10.0.1.0/24"] # 외부 연결 (ALB, NAT)
+  # ALB/RDS 가용성 요건을 위해 2개 AZ 사용
+  azs             = ["ap-northeast-2a", "ap-northeast-2c"]
+  private_subnets = ["10.0.2.0/24", "10.0.3.0/24"] # 보안 영역 (EC2, RDS)
+  public_subnets  = ["10.0.1.0/24", "10.0.4.0/24"] # 외부 연결 (ALB, NAT)
 
   # 보안 안정화를 위한 NAT Gateway 활성화
   enable_nat_gateway = true

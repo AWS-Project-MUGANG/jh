@@ -1,5 +1,5 @@
 # 현재 프로젝트에서 사용하는 AWS 리소스 분석 (최신)
-현재 프로젝트의 Terraform 코드를 분석한 결과, **보안과 확장성을 고려한 24개**의 AWS 리소스로 구성되어 있습니다.
+현재 프로젝트의 Terraform 코드를 분석한 결과, **보안과 확장성을 고려한 29개**의 AWS 리소스로 구성되어 있습니다.
 
 ### 1. VPC 및 네트워킹 (`vpc.tf`)
 보안 강화를 위해 Public/Private Subnet을 분리하고, Private Subnet의 외부 통신을 위해 NAT Gateway를 구성합니다.

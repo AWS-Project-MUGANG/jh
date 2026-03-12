@@ -56,3 +56,7 @@ db_data/
 # Local docker-compose overrides
 docker-compose.override.yml
 docker-compose.local.yml
+
+# Terraform secrets
+terraform/*.tfvars
+terraform/*.tfvars.json

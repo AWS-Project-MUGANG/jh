@@ -34,6 +34,7 @@ resource "aws_lb_target_group" "app" {
 resource "aws_instance" "app_server" {
   ami                    = "ami-0c9c942bd7bf113a2" # Amazon Linux 2023 (ap-northeast-2)
   instance_type          = "t3.medium"
+  key_name               = var.key_name
   subnet_id              = module.vpc.private_subnets[0]
   vpc_security_group_ids = [aws_security_group.app_sg.id]
   iam_instance_profile   = aws_iam_instance_profile.ec2_profile.name
@@ -63,4 +64,14 @@ resource "aws_iam_role" "ec2_role" {
 resource "aws_iam_instance_profile" "ec2_profile" {
   name = "mugang_ec2_profile"
   role = aws_iam_role.ec2_role.name
+}
+
+resource "aws_iam_role_policy_attachment" "ec2_bedrock" {
+  role       = aws_iam_role.ec2_role.name
+  policy_arn = "arn:aws:iam::aws:policy/AmazonBedrockFullAccess"
+}
+
+resource "aws_iam_role_policy_attachment" "ec2_s3" {
+  role       = aws_iam_role.ec2_role.name
+  policy_arn = "arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess"
 }

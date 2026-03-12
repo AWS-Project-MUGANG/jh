@@ -1,0 +1,7 @@
+db_name     = "mugang"
+db_username = "mugangadmin"
+db_password = "CHANGE_ME_STRONG_PASSWORD"
+
+# Existing variable in this repository.
+# Set your EC2 key pair name if compute.tf keeps EC2 resource.
+key_name = "your-ec2-keypair-name"
