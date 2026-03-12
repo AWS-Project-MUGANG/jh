@@ -1,4 +1,4 @@
-name: Deploy to Amazon ECR and EKS
+name: Deploy to Amazon ECR and EC2
 
 on:
   push:
@@ -9,60 +9,103 @@ env:
   AWS_REGION: ap-northeast-2 # 서울 리전
   ECR_FRONTEND_REPOSITORY: mugang-frontend
   ECR_BACKEND_REPOSITORY: mugang-backend
-  EKS_CLUSTER_NAME: mugang-eks-cluster # 생성할 EKS 클러스터 이름 명시 필요
 
 jobs:
-  build-and-deploy:
+  # ────────────────────────────────────────────────────────────────────────────
+  # Job 1: Docker 이미지 빌드 → ECR 푸시
+  # ────────────────────────────────────────────────────────────────────────────
+  build-and-push:
     runs-on: ubuntu-latest
+    outputs:
+      image_tag: ${{ steps.set-tag.outputs.image_tag }}
+      ecr_registry: ${{ steps.login-ecr.outputs.registry }}
 
     steps:
     - name: Checkout Source Code
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
 
-    # 1. AWS 자격 증명 (Github 설정에 저장해둔 액세스 키 사용)
+    - name: Set Image Tag (commit SHA)
+      id: set-tag
+      run: echo "image_tag=${GITHUB_SHA::8}" >> $GITHUB_OUTPUT
+
+    # 1. AWS 자격 증명
     - name: Configure AWS credentials
-      uses: aws-actions/configure-aws-credentials@v2
+      uses: aws-actions/configure-aws-credentials@v4
       with:
         aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         aws-region: ${{ env.AWS_REGION }}
 
-    # 2. Amazon ECR 로깅
+    # 2. Amazon ECR 로그인
     - name: Login to Amazon ECR
       id: login-ecr
-      uses: aws-actions/amazon-ecr-login@v1
+      uses: aws-actions/amazon-ecr-login@v2
 
-    # 3. 프론트엔드(Vanilla JS + Nginx) 도커 이미지 빌드 및 ECR 푸시
+    # 3. 프론트엔드 이미지 빌드 & ECR 푸시
     - name: Build and Push Frontend Image
-      id: build-frontend
       env:
         ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-        IMAGE_TAG: ${{ github.sha }}
+        IMAGE_TAG: ${{ steps.set-tag.outputs.image_tag }}
       run: |
         docker build -t $ECR_REGISTRY/$ECR_FRONTEND_REPOSITORY:$IMAGE_TAG ./frontend
         docker push $ECR_REGISTRY/$ECR_FRONTEND_REPOSITORY:$IMAGE_TAG
-        echo "FRONTEND_IMAGE=$ECR_REGISTRY/$ECR_FRONTEND_REPOSITORY:$IMAGE_TAG" >> $GITHUB_ENV
 
-    # 4. 백엔드(FastAPI) 도커 이미지 빌드 및 ECR 푸시
+    # 4. 백엔드 이미지 빌드 & ECR 푸시
     - name: Build and Push Backend Image
-      id: build-backend
       env:
         ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-        IMAGE_TAG: ${{ github.sha }}
+        IMAGE_TAG: ${{ steps.set-tag.outputs.image_tag }}
       run: |
         docker build -t $ECR_REGISTRY/$ECR_BACKEND_REPOSITORY:$IMAGE_TAG ./backend
         docker push $ECR_REGISTRY/$ECR_BACKEND_REPOSITORY:$IMAGE_TAG
-        echo "BACKEND_IMAGE=$ECR_REGISTRY/$ECR_BACKEND_REPOSITORY:$IMAGE_TAG" >> $GITHUB_ENV
 
-    # 5. EKS 블루/그린 배포 (또는 롤링 업데이트 매니페스트 배포) 파트
-    # (실제 환경에서는 k8s deployment.yml 파일을 덮어쓰는 kubectl apply 실행)
-    - name: Update KubeConfig and Deploy to EKS
+  # ────────────────────────────────────────────────────────────────────────────
+  # Job 2: Terraform apply → EC2 user_data로 최신 이미지 배포
+  # ────────────────────────────────────────────────────────────────────────────
+  terraform-deploy:
+    runs-on: ubuntu-latest
+    needs: build-and-push # ECR 푸시 완료 후 실행
+
+    steps:
+    - name: Checkout Source Code
+      uses: actions/checkout@v4
+
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ env.AWS_REGION }}
+
+    # 5. Terraform 설치
+    - name: Setup Terraform
+      uses: hashicorp/setup-terraform@v3
+      with:
+        terraform_version: "~1.7"
+
+    # 6. Terraform 초기화 (S3 백엔드 사용)
+    - name: Terraform Init
+      working-directory: terraform
       run: |
-        # AWS EKS 콘솔과 연결 제어권 가져오기
-        aws eks update-kubeconfig --region $AWS_REGION --name $EKS_CLUSTER_NAME
-        
-        # (임시) 현업에서는 image set 명령어나 kustomize로 새로운 SHA 태그 이미지를 배포
-        # kubectl set image deployment/frontend-deployment frontend=$FRONTEND_IMAGE
-        # kubectl set image deployment/backend-deployment backend=$BACKEND_IMAGE
-        
-        echo "Deployment Success: Blue/Green or Rolling update triggered to Amazon EKS"
+        terraform init \
+          -backend-config="bucket=${{ secrets.TF_STATE_BUCKET }}" \
+          -backend-config="key=mugang/terraform.tfstate" \
+          -backend-config="region=${{ env.AWS_REGION }}"
+
+    # 7. Terraform Plan (변경 사항 확인)
+    - name: Terraform Plan
+      working-directory: terraform
+      env:
+        TF_VAR_image_tag: ${{ needs.build-and-push.outputs.image_tag }}
+        TF_VAR_db_password: ${{ secrets.DB_PASSWORD }}
+        TF_VAR_key_name: ${{ secrets.EC2_KEY_NAME }}
+      run: terraform plan -out=tfplan
+
+    # 8. Terraform Apply (EC2 인스턴스를 user_data로 재생성하여 최신 이미지 배포)
+    - name: Terraform Apply
+      working-directory: terraform
+      env:
+        TF_VAR_image_tag: ${{ needs.build-and-push.outputs.image_tag }}
+        TF_VAR_db_password: ${{ secrets.DB_PASSWORD }}
+        TF_VAR_key_name: ${{ secrets.EC2_KEY_NAME }}
+      run: terraform apply -auto-approve tfplan
