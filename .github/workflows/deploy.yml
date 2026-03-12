@@ -170,21 +170,33 @@ jobs:
           CMD_ID=$(aws ssm send-command \
             --document-name "AWS-RunShellScript" \
             --instance-ids "$PROXY_ID" \
-            --parameters "{\"commands\":[\"curl -sf http://${INACTIVE_IP}:8000/docs\"]}" \
+            --parameters "{\"commands\":[\"curl -fsS --max-time 5 http://${INACTIVE_IP}:8000/docs\"]}" \
             --query 'Command.CommandId' --output text 2>/dev/null || echo "")
 
-          sleep 8
+          if [ -z "$CMD_ID" ]; then
+            echo "  [${i}/45] SSM 전송 실패, 재시도..."
+            sleep 8
+            continue
+          fi
 
-          if [ -n "$CMD_ID" ]; then
-            STATUS=$(aws ssm get-command-invocation \
+          # Pending/InProgress는 실패로 보지 않고 완료될 때까지 폴링
+          RESULT="Pending"
+          for j in $(seq 1 6); do
+            sleep 5
+            RESULT=$(aws ssm get-command-invocation \
               --command-id "$CMD_ID" \
               --instance-id "$PROXY_ID" \
               --query 'StatusDetails' --output text 2>/dev/null || echo "Pending")
-            echo "  [${i}/45] 헬스체크: $STATUS"
-            if [ "$STATUS" = "Success" ]; then
-              echo "헬스체크 통과!"
-              exit 0
+            echo "  [${i}/45] 헬스체크: $RESULT"
+            if [ "$RESULT" = "Success" ] || [ "$RESULT" = "Failed" ] || \
+               [ "$RESULT" = "TimedOut" ] || [ "$RESULT" = "Cancelled" ]; then
+              break
             fi
+          done
+
+          if [ "$RESULT" = "Success" ]; then
+            echo "헬스체크 통과!"
+            exit 0
           fi
         done
         echo "헬스체크 실패 — 배포 중단"
