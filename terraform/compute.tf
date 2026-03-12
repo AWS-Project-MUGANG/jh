@@ -13,7 +13,7 @@ locals {
 
 # ── 1. Proxy EC2 (Nginx Reverse Proxy, Public Subnet) ─────────────────────────
 resource "aws_instance" "proxy" {
-  ami                         = "ami-0c9c942bd7bf113a2" # Amazon Linux 2023
+  ami                         = "ami-042e76978adeb8c48" # Ubuntu 22.04 LTS
   instance_type               = "t3.micro"
   key_name                    = var.key_name
   subnet_id                   = aws_subnet.public.id
@@ -70,7 +70,7 @@ resource "aws_instance" "proxy" {
 # ── 2. Launch Template - Blue ──────────────────────────────────────────────────
 resource "aws_launch_template" "blue" {
   name_prefix   = "mugang-blue-"
-  image_id      = "ami-0c9c942bd7bf113a2"
+  image_id      = "ami-042e76978adeb8c48" # Ubuntu 22.04 LTS
   instance_type = "t3.medium"
   key_name      = var.key_name
 
@@ -124,7 +124,7 @@ resource "aws_launch_template" "blue" {
 # ── 3. Launch Template - Green ─────────────────────────────────────────────────
 resource "aws_launch_template" "green" {
   name_prefix   = "mugang-green-"
-  image_id      = "ami-0c9c942bd7bf113a2"
+  image_id      = "ami-042e76978adeb8c48" # Ubuntu 22.04 LTS
   instance_type = "t3.medium"
   key_name      = var.key_name
 

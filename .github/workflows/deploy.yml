@@ -160,8 +160,12 @@ jobs:
           --output text)
         echo "proxy_id=$PROXY_ID" >> $GITHUB_OUTPUT
 
+        # Docker 설치 및 컨테이너 시작 대기 (apt-get 소요 시간)
+        echo "컨테이너 초기화 대기 중 (5분)..."
+        sleep 300
+
         # Proxy에서 Inactive EC2로 헬스체크 (SSM RunCommand)
-        echo "헬스체크 대기 중 (최대 3분)..."
+        echo "헬스체크 대기 중 (최대 6분)..."
         for i in $(seq 1 45); do
           CMD_ID=$(aws ssm send-command \
             --document-name "AWS-RunShellScript" \
@@ -176,7 +180,7 @@ jobs:
               --command-id "$CMD_ID" \
               --instance-id "$PROXY_ID" \
               --query 'StatusDetails' --output text 2>/dev/null || echo "Pending")
-            echo "  [${i}/18] 헬스체크: $STATUS"
+            echo "  [${i}/45] 헬스체크: $STATUS"
             if [ "$STATUS" = "Success" ]; then
               echo "헬스체크 통과!"
               exit 0
