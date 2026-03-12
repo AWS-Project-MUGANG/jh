@@ -91,11 +91,6 @@ resource "aws_launch_template" "blue" {
     dnf install -y docker
     systemctl enable --now docker
 
-    curl -fsSL \
-      "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" \
-      -o /usr/local/bin/docker-compose
-    chmod +x /usr/local/bin/docker-compose
-
     aws ecr get-login-password --region $${AWS_REGION} \
       | docker login --username AWS --password-stdin $${ECR_REGISTRY}
 
@@ -115,7 +110,7 @@ resource "aws_launch_template" "blue" {
         restart: always
     COMPOSE
 
-    docker-compose -f /app/docker-compose.yml up -d
+    docker compose -f /app/docker-compose.yml up -d
   EOF
   )
 
@@ -150,11 +145,6 @@ resource "aws_launch_template" "green" {
     dnf install -y docker
     systemctl enable --now docker
 
-    curl -fsSL \
-      "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" \
-      -o /usr/local/bin/docker-compose
-    chmod +x /usr/local/bin/docker-compose
-
     aws ecr get-login-password --region $${AWS_REGION} \
       | docker login --username AWS --password-stdin $${ECR_REGISTRY}
 
@@ -174,7 +164,7 @@ resource "aws_launch_template" "green" {
         restart: always
     COMPOSE
 
-    docker-compose -f /app/docker-compose.yml up -d
+    docker compose -f /app/docker-compose.yml up -d
   EOF
   )
 
