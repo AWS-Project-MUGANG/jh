@@ -25,7 +25,8 @@ resource "aws_instance" "proxy" {
     #!/bin/bash
     set -e
 
-    dnf install -y nginx
+    apt-get update -y
+    apt-get install -y nginx
     systemctl enable nginx
 
     # upstream 전환 스크립트 생성 (GitHub Actions가 SSM으로 호출)
@@ -87,8 +88,8 @@ resource "aws_launch_template" "blue" {
     ECR_REGISTRY="${data.aws_caller_identity.current.account_id}.dkr.ecr.$${AWS_REGION}.amazonaws.com"
     IMAGE_TAG="${var.blue_image_tag}"
 
-    dnf update -y
-    dnf install -y docker
+    apt-get update -y
+    apt-get install -y docker.io docker-compose-plugin awscli
     systemctl enable --now docker
 
     aws ecr get-login-password --region $${AWS_REGION} \
@@ -141,8 +142,8 @@ resource "aws_launch_template" "green" {
     ECR_REGISTRY="${data.aws_caller_identity.current.account_id}.dkr.ecr.$${AWS_REGION}.amazonaws.com"
     IMAGE_TAG="${var.green_image_tag}"
 
-    dnf update -y
-    dnf install -y docker
+    apt-get update -y
+    apt-get install -y docker.io docker-compose-plugin awscli
     systemctl enable --now docker
 
     aws ecr get-login-password --region $${AWS_REGION} \
