@@ -162,7 +162,7 @@ jobs:
 
         # Proxy에서 Inactive EC2로 헬스체크 (SSM RunCommand)
         echo "헬스체크 대기 중 (최대 3분)..."
-        for i in $(seq 1 18); do
+        for i in $(seq 1 45); do
           CMD_ID=$(aws ssm send-command \
             --document-name "AWS-RunShellScript" \
             --instance-ids "$PROXY_ID" \
