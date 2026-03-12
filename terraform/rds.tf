@@ -12,7 +12,7 @@ resource "aws_db_instance" "postgres_db" {
   identifier             = "mugang-db"
   allocated_storage      = 20
   engine                 = "postgres"
-  engine_version         = "15.3"
+  engine_version         = "15.12"
   instance_class         = "db.t3.micro"
   db_name                = var.db_name
   username               = var.db_username
