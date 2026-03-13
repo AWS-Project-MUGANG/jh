@@ -1,329 +1,536 @@
 <!DOCTYPE html>
 <html lang="ko">
-
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>무강대학교 학사행정 로그인</title>
-    <!-- 공통 스타일 사용 -->
-    <link rel="stylesheet" href="../../css/main.css">
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
-    <style>
-        body {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            background-color: var(--sidebar-bg);
-        }
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>로그인 - 무강대학교 수강신청</title>
+  <link rel="stylesheet" href="../../css/main.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700&family=Inria+Serif&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+  <style>
+    /* ─── CSS 변수 ─── */
+    :root {
+      --navy:       #152747;
+      --navy-light: #1e3a60;
+      --white:      #ffffff;
+      --gray-light: #e8ecf2;
+      --border:     #d8dde8;
+      --text-dark:  #1a2540;
+      --text-muted: #a0aec0;
+    }
 
-        .login-box {
-            background: white;
-            padding: 40px;
-            border-radius: 8px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-            width: 100%;
-            max-width: 400px;
-            text-align: center;
-        }
+    /* ─── 로그인 페이지 전용 ─── */
+    .login-body {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+    }
 
-        .login-box h1 {
-            color: var(--primary-color);
-            margin-bottom: 5px;
-        }
+    .login-wrap {
+      width: 420px;
+    }
 
-        .login-box p {
-            color: #666;
-            margin-bottom: 30px;
-            font-size: 0.9rem;
-        }
+    /* ─── 상단 로고 ─── */
+    .login-logo {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      justify-content: center;
+      margin-bottom: 32px;
+    }
 
-        .input-group {
-            margin-bottom: 20px;
-            text-align: left;
-        }
+    .login-logo-circle {
+      width: 56px;
+      height: 56px;
+      border-radius: 50%;
+      background: var(--gray-light);
+      overflow: hidden;
+      flex-shrink: 0;
+    }
 
-        .input-group label {
-            display: block;
-            margin-bottom: 5px;
-            font-weight: 500;
-        }
+    .login-logo-circle img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      border-radius: 50%;
+    }
 
-        .input-group input {
-            width: 100%;
-            padding: 10px;
-            border: 1px solid var(--border-color);
-            border-radius: 4px;
-        }
+    .login-logo-text {
+      display: flex;
+      flex-direction: column;
+    }
 
-        .btn-login {
-            width: 100%;
-            padding: 12px;
-            background-color: var(--primary-color);
-            color: white;
-            border: none;
-            border-radius: 4px;
-            font-size: 1rem;
-            cursor: pointer;
-            transition: background-color 0.2s;
-        }
+    .login-logo-name {
+      font-size: 22px;
+      font-weight: 700;
+      color: var(--navy);
+      letter-spacing: -0.3px;
+    }
 
-        .btn-login:hover {
-            background-color: #121858;
-        }
+    .login-logo-sub {
+      font-family: 'Inria Serif', serif;
+      font-size: 13px;
+      color: #6b7d9e;
+      margin-top: 2px;
+    }
 
-        .auth-links {
-            margin-top: 15px;
-            text-align: center;
-            font-size: 0.9rem;
-        }
+    /* ─── 카드 ─── */
+    .login-card {
+      background: var(--white);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      box-shadow: 0 4px 20px rgba(21, 39, 71, 0.08);
+      overflow: hidden;
+    }
 
-        .auth-links a {
-            color: var(--primary-color);
-            text-decoration: none;
-            margin: 0 10px;
-        }
+    .login-card-header {
+      background: var(--navy);
+      padding: 22px 32px;
+    }
 
-        .auth-links span {
-            color: #ccc;
-        }
+    .login-card-header h2 {
+      font-size: 18px;
+      font-weight: 600;
+      color: var(--white);
+      letter-spacing: -0.2px;
+    }
 
-        /* Modal Styles */
-        .modal-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0, 0, 0, 0.5);
-            display: none;
-            align-items: center;
-            justify-content: center;
-            z-index: 1000;
-        }
+    .login-card-header p {
+      font-size: 13px;
+      color: var(--text-muted);
+      margin-top: 4px;
+    }
 
-        .modal-content {
-            background: white;
-            padding: 30px;
-            border-radius: 8px;
-            width: 100%;
-            max-width: 400px;
-        }
+    .login-card-body {
+      padding: 32px;
+    }
 
-        .modal-title {
-            font-size: 1.2rem;
-            font-weight: bold;
-            margin-bottom: 15px;
-            color: var(--primary-color);
-        }
+    /* ─── 입력 필드 ─── */
+    .login-field {
+      margin-bottom: 18px;
+    }
 
-        .modal-desc {
-            font-size: 0.9rem;
-            color: #666;
-            margin-bottom: 20px;
-            line-height: 1.5;
-        }
-    </style>
+    .login-field label {
+      display: block;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--navy);
+      margin-bottom: 7px;
+    }
+
+    .login-field input {
+      width: 100%;
+      padding: 11px 14px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-size: 14px;
+      font-family: 'Noto Sans KR', sans-serif;
+      color: var(--text-dark);
+      background: #fff;
+      transition: border-color .2s, box-shadow .2s;
+      box-sizing: border-box;
+    }
+
+    .login-field input:focus {
+      outline: none;
+      border-color: var(--navy);
+      box-shadow: 0 0 0 3px rgba(21, 39, 71, 0.08);
+    }
+
+    .login-field input::placeholder {
+      color: #b0b8c8;
+    }
+
+    /* ─── 로그인 버튼 ─── */
+    .login-btn {
+      width: 100%;
+      padding: 13px;
+      background: var(--navy);
+      color: var(--white);
+      border: none;
+      border-radius: 8px;
+      font-size: 15px;
+      font-weight: 700;
+      font-family: 'Noto Sans KR', sans-serif;
+      cursor: pointer;
+      transition: background .2s, transform .1s;
+      margin-top: 6px;
+    }
+
+    .login-btn:hover  { background: var(--navy-light); }
+    .login-btn:active { transform: translateY(1px); }
+
+    /* ─── 에러 메시지 ─── */
+    .login-error {
+      display: none;
+      margin-top: 14px;
+      padding: 10px 14px;
+      background: #fff0f0;
+      border: 1px solid #f5c6c6;
+      border-radius: 6px;
+      font-size: 13px;
+      color: #c0392b;
+      text-align: center;
+    }
+
+    .login-error.show { display: block; }
+
+    /* ─── 하단 링크 ─── */
+    .login-links {
+      text-align: center;
+      margin-top: 16px;
+      font-size: 12px;
+      color: #9aa5b8;
+    }
+
+    .login-links a {
+      color: #6b7d9e;
+      text-decoration: none;
+    }
+
+    .login-links a:hover { text-decoration: underline; }
+
+    .login-links span { margin: 0 8px; color: #d0d7e3; }
+
+    /* ─── 하단 안내 ─── */
+    .login-footer {
+      text-align: center;
+      margin-top: 24px;
+      font-size: 12px;
+      color: #9aa5b8;
+      line-height: 1.7;
+    }
+
+    /* ─── 모달 ─── */
+    .modal-overlay {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0, 0, 0, 0.45);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+    }
+
+    .modal-overlay.show { display: flex; }
+
+    .modal-content {
+      background: var(--white);
+      border-radius: 12px;
+      box-shadow: 0 8px 32px rgba(21, 39, 71, 0.16);
+      width: 100%;
+      max-width: 400px;
+      overflow: hidden;
+    }
+
+    .modal-header {
+      background: var(--navy);
+      padding: 18px 28px;
+    }
+
+    .modal-title {
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--white);
+      letter-spacing: -0.2px;
+    }
+
+    .modal-body {
+      padding: 28px;
+    }
+
+    .modal-desc {
+      font-size: 13px;
+      color: #6b7d9e;
+      margin-bottom: 20px;
+      line-height: 1.6;
+    }
+
+    .modal-field {
+      margin-bottom: 16px;
+    }
+
+    .modal-field label {
+      display: block;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--navy);
+      margin-bottom: 6px;
+    }
+
+    .modal-field input {
+      width: 100%;
+      padding: 10px 13px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-size: 14px;
+      font-family: 'Noto Sans KR', sans-serif;
+      color: var(--text-dark);
+      background: #fff;
+      transition: border-color .2s, box-shadow .2s;
+      box-sizing: border-box;
+    }
+
+    .modal-field input:focus {
+      outline: none;
+      border-color: var(--navy);
+      box-shadow: 0 0 0 3px rgba(21, 39, 71, 0.08);
+    }
+
+    .modal-field input::placeholder { color: #b0b8c8; }
+
+    .modal-btn {
+      width: 100%;
+      padding: 12px;
+      border: none;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 700;
+      font-family: 'Noto Sans KR', sans-serif;
+      cursor: pointer;
+      transition: background .2s, transform .1s;
+      margin-top: 4px;
+    }
+
+    .modal-btn-primary   { background: var(--navy); color: var(--white); }
+    .modal-btn-primary:hover { background: var(--navy-light); }
+    .modal-btn-success   { background: #2e7d4f; color: var(--white); }
+    .modal-btn-success:hover { background: #256040; }
+    .modal-btn:active    { transform: translateY(1px); }
+
+    .modal-cancel {
+      display: block;
+      text-align: center;
+      margin-top: 12px;
+      font-size: 12px;
+      color: #9aa5b8;
+      cursor: pointer;
+      text-decoration: none;
+    }
+
+    .modal-cancel:hover { color: #6b7d9e; }
+  </style>
 </head>
+<body class="login-body">
 
-<body>
-    <div class="login-box">
-        <h1>무강대학교</h1>
-        <p>통합 학사행정 서비스 로그인</p>
+  <div class="login-wrap">
+
+    <!-- 로고 -->
+    <div class="login-logo">
+        <img src="/image/logo.png" alt="무강대학교 로고" />
+    </div>
+
+    <!-- 카드 -->
+    <div class="login-card">
+      <div class="login-card-header">
+        <h2>수강신청 시스템 로그인</h2>
+        <p>학번과 비밀번호로 로그인하세요.</p>
+      </div>
+
+      <div class="login-card-body">
         <form id="loginForm" onsubmit="handleLogin(event)">
-            <div class="input-group">
-                <label for="studentId">학번/사번</label>
-                <input type="text" id="studentId" placeholder="학번을 입력하세요 (예: 20240001)" required>
-            </div>
-            <div class="input-group">
-                <label for="password">비밀번호</label>
-                <input type="password" id="password" placeholder="비밀번호 입력 (초기: 1234)" required>
-            </div>
-            <button type="submit" class="btn-login">로그인</button>
+          <div class="login-field">
+            <label for="studentId">학번 / 사번</label>
+            <input type="text" id="studentId" placeholder="학번을 입력하세요 (예: 20240001)" autocomplete="username" required />
+          </div>
+          <div class="login-field">
+            <label for="password">비밀번호</label>
+            <input type="password" id="password" placeholder="비밀번호를 입력하세요 (초기: 1234)" autocomplete="current-password" required />
+          </div>
+          <button type="submit" class="login-btn">로그인</button>
         </form>
-        <div class="auth-links">
-            <a href="#" onclick="openFindModal('id')">학번/사번 찾기</a>
-            <span>|</span>
-            <a href="#" onclick="openFindModal('pw')">비밀번호 찾기</a>
+
+        <div class="login-error" id="login-error"></div>
+
+        <div class="login-links">
+          <a href="#" onclick="openFindModal('id')">학번/사번 찾기</a>
+          <span>|</span>
+          <a href="#" onclick="openFindModal('pw')">비밀번호 찾기</a>
         </div>
+      </div>
     </div>
 
-    <!-- First Setup Modal -->
-    <div class="modal-overlay" id="firstSetupModal">
-        <div class="modal-content">
-            <div class="modal-title">🚨 초기 비밀번호 및 개인정보 등록</div>
-            <div class="modal-desc">
-                초기 비밀번호로 접속하셨습니다. 안전한 서비스 이용을 위해 <b>새 비밀번호</b>와 <b>연락처/이메일</b>을 반드시 등록해주셔야 합니다.
-            </div>
-            <form id="setupForm" onsubmit="handleFirstSetup(event)">
-                <input type="hidden" id="setupToken">
-                <input type="hidden" id="setupStudentId">
-                <div class="input-group">
-                    <label>새로운 비밀번호</label>
-                    <input type="password" id="newPassword" required>
-                </div>
-                <div class="input-group">
-                    <label>이메일</label>
-                    <input type="email" id="email" required placeholder="example@mugang.ac.kr">
-                </div>
-                <div class="input-group">
-                    <label>전화번호</label>
-                    <input type="text" id="phone" required placeholder="010-0000-0000">
-                </div>
-                <button type="submit" class="btn-login" style="background-color: #28a745;">정보 업데이트 및 로그인</button>
-            </form>
-        </div>
+    <div class="login-footer">
+      무강대학교 학사정보시스템<br />
+      문의: 정보전산관리부 ☎ 02-0000-0000
     </div>
+  </div>
 
-    <!-- Find ID/PW Modal -->
-    <div class="modal-overlay" id="findModal">
-        <div class="modal-content">
-            <div class="modal-title" id="findModalTitle">계정 복구</div>
-            <form id="findForm" onsubmit="handleFind(event)">
-                <input type="hidden" id="findType"> <!-- 'id' or 'pw' -->
-
-                <div class="input-group" id="findNameGroup" style="display: none;">
-                    <label>이름</label>
-                    <input type="text" id="findName" placeholder="이름을 입력하세요">
-                </div>
-                <div class="input-group" id="findIdGroup" style="display: none;">
-                    <label>학번/사번</label>
-                    <input type="text" id="findStudentId" placeholder="학번을 입력하세요">
-                </div>
-                <div class="input-group">
-                    <label>등록된 이메일</label>
-                    <input type="email" id="findEmail" required placeholder="가입 시 등록한 이메일">
-                </div>
-
-                <button type="submit" class="btn-login" id="findSubmitBtn">요청하기</button>
-                <div style="margin-top: 10px; text-align: center;">
-                    <a href="#" onclick="document.getElementById('findModal').style.display='none'"
-                        style="font-size: 0.9rem; color: #666;">취소</a>
-                </div>
-            </form>
+  <!-- 초기 비밀번호 설정 모달 -->
+  <div class="modal-overlay" id="firstSetupModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <div class="modal-title">초기 비밀번호 및 개인정보 등록</div>
+      </div>
+      <div class="modal-body">
+        <div class="modal-desc">
+          초기 비밀번호로 접속하셨습니다. 안전한 서비스 이용을 위해 <b>새 비밀번호</b>와 <b>연락처/이메일</b>을 반드시 등록해주셔야 합니다.
         </div>
+        <form id="setupForm" onsubmit="handleFirstSetup(event)">
+          <input type="hidden" id="setupToken" />
+          <input type="hidden" id="setupStudentId" />
+          <div class="modal-field">
+            <label>새로운 비밀번호</label>
+            <input type="password" id="newPassword" required />
+          </div>
+          <div class="modal-field">
+            <label>이메일</label>
+            <input type="email" id="email" required placeholder="example@mugang.ac.kr" />
+          </div>
+          <div class="modal-field">
+            <label>전화번호</label>
+            <input type="text" id="phone" required placeholder="010-0000-0000" />
+          </div>
+          <button type="submit" class="modal-btn modal-btn-success">정보 업데이트 및 로그인</button>
+        </form>
+      </div>
     </div>
+  </div>
 
-    <script>
-        // 백엔드 통신 로그인 로직
-        async function handleLogin(e) {
-            e.preventDefault();
-            const sid = document.getElementById('studentId').value;
-            const pwd = document.getElementById('password').value;
+  <!-- 학번/비밀번호 찾기 모달 -->
+  <div class="modal-overlay" id="findModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <div class="modal-title" id="findModalTitle">계정 복구</div>
+      </div>
+      <div class="modal-body">
+        <form id="findForm" onsubmit="handleFind(event)">
+          <input type="hidden" id="findType" />
 
-            if (sid && pwd) {
-                try {
-                    const response = await fetch('/api/v1/auth/login', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ student_id: sid, password: pwd })
-                    });
-                    const data = await response.json();
+          <div class="modal-field" id="findNameGroup" style="display: none;">
+            <label>이름</label>
+            <input type="text" id="findName" placeholder="이름을 입력하세요" />
+          </div>
+          <div class="modal-field" id="findIdGroup" style="display: none;">
+            <label>학번 / 사번</label>
+            <input type="text" id="findStudentId" placeholder="학번을 입력하세요" />
+          </div>
+          <div class="modal-field">
+            <label>등록된 이메일</label>
+            <input type="email" id="findEmail" required placeholder="가입 시 등록한 이메일" />
+          </div>
 
-                    if (response.ok) {
-                        if (data.require_setup) {
-                            // First Setup Flow 
-                            document.getElementById('setupToken').value = data.setup_token;
-                            document.getElementById('setupStudentId').value = sid;
-                            document.getElementById('firstSetupModal').style.display = 'flex';
-                        } else {
-                            // Normal Login Flow
-                            localStorage.setItem('user_no', data.user_no);
-                            localStorage.setItem('access_token', data.access_token);
-                            localStorage.setItem('role', data.role);
+          <button type="submit" class="modal-btn modal-btn-primary" id="findSubmitBtn">요청하기</button>
+          <a class="modal-cancel" onclick="document.getElementById('findModal').classList.remove('show')">취소</a>
+        </form>
+      </div>
+    </div>
+  </div>
 
-                            window.location.href = data.role === 'STAFF' ? '../admin/enrollment_schedule.html' : '../student/dashboard.html';
-                        }
-                    } else {
-                        alert(`로그인 실패: ${data.detail}`);
-                    }
-                } catch (error) {
-                    console.error('Login error:', error);
-                    alert('서버 연결에 실패했습니다. 백엔드가 켜져있는지 확인해주세요.');
-                }
-            }
+  <script>
+    async function handleLogin(e) {
+      e.preventDefault();
+      const sid = document.getElementById('studentId').value.trim();
+      const pwd = document.getElementById('password').value;
+      const err = document.getElementById('login-error');
+      err.classList.remove('show');
+
+      try {
+        const response = await fetch('/api/v1/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ student_id: sid, password: pwd })
+        });
+        const data = await response.json();
+
+        if (response.ok) {
+          if (data.require_setup) {
+            document.getElementById('setupToken').value = data.setup_token;
+            document.getElementById('setupStudentId').value = sid;
+            document.getElementById('firstSetupModal').classList.add('show');
+          } else {
+            localStorage.setItem('user_no',      data.user_no);
+            localStorage.setItem('access_token', data.access_token);
+            localStorage.setItem('role',         data.role);
+            window.location.href = data.role === 'STAFF'
+              ? '../admin/enrollment_schedule.html'
+              : '../student/dashboard.html';
+          }
+        } else {
+          err.textContent = data.detail || '아이디 또는 비밀번호가 올바르지 않습니다.';
+          err.classList.add('show');
         }
+      } catch (error) {
+        console.error('Login error:', error);
+        err.textContent = '서버에 연결할 수 없습니다. 잠시 후 다시 시도해주세요.';
+        err.classList.add('show');
+      }
+    }
 
-        async function handleFirstSetup(e) {
-            e.preventDefault();
-            const sid = document.getElementById('setupStudentId').value;
-            const token = document.getElementById('setupToken').value;
-            const pwd = document.getElementById('newPassword').value;
-            const email = document.getElementById('email').value;
-            const phone = document.getElementById('phone').value;
+    async function handleFirstSetup(e) {
+      e.preventDefault();
+      const sid   = document.getElementById('setupStudentId').value;
+      const token = document.getElementById('setupToken').value;
+      const pwd   = document.getElementById('newPassword').value;
+      const email = document.getElementById('email').value;
+      const phone = document.getElementById('phone').value;
 
-            try {
-                const response = await fetch('/api/v1/auth/first-setup', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        student_id: sid,
-                        token: token,
-                        new_password: pwd,
-                        email: email,
-                        phone: phone
-                    })
-                });
-                const data = await response.json();
-                if (response.ok) {
-                    alert('비밀번호가 성공적으로 업데이트 되었습니다. 새 비밀번호로 다시 로그인 해주세요.');
-                    window.location.reload();
-                } else {
-                    alert(`오류: ${data.detail}`);
-                }
-            } catch (e) {
-                console.error(e);
-            }
+      try {
+        const response = await fetch('/api/v1/auth/first-setup', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ student_id: sid, token, new_password: pwd, email, phone })
+        });
+        const data = await response.json();
+        if (response.ok) {
+          alert('비밀번호가 성공적으로 업데이트 되었습니다. 새 비밀번호로 다시 로그인 해주세요.');
+          window.location.reload();
+        } else {
+          alert(`오류: ${data.detail}`);
         }
+      } catch (err) {
+        console.error(err);
+      }
+    }
 
-        function openFindModal(type) {
-            document.getElementById('findModal').style.display = 'flex';
-            document.getElementById('findType').value = type;
+    function openFindModal(type) {
+      document.getElementById('findModal').classList.add('show');
+      document.getElementById('findType').value = type;
 
-            if (type === 'id') {
-                document.getElementById('findModalTitle').innerText = '학번/사번 찾기';
-                document.getElementById('findNameGroup').style.display = 'block';
-                document.getElementById('findIdGroup').style.display = 'none';
-                document.getElementById('findSubmitBtn').innerText = '학번 찾기';
-            } else {
-                document.getElementById('findModalTitle').innerText = '임시 비밀번호 발급';
-                document.getElementById('findNameGroup').style.display = 'none';
-                document.getElementById('findIdGroup').style.display = 'block';
-                document.getElementById('findSubmitBtn').innerText = '비밀번호 발급';
-            }
+      if (type === 'id') {
+        document.getElementById('findModalTitle').innerText = '학번/사번 찾기';
+        document.getElementById('findNameGroup').style.display = 'block';
+        document.getElementById('findIdGroup').style.display   = 'none';
+        document.getElementById('findSubmitBtn').innerText     = '학번 찾기';
+      } else {
+        document.getElementById('findModalTitle').innerText = '임시 비밀번호 발급';
+        document.getElementById('findNameGroup').style.display = 'none';
+        document.getElementById('findIdGroup').style.display   = 'block';
+        document.getElementById('findSubmitBtn').innerText     = '비밀번호 발급';
+      }
+    }
+
+    async function handleFind(e) {
+      e.preventDefault();
+      const type  = document.getElementById('findType').value;
+      const email = document.getElementById('findEmail').value;
+
+      try {
+        if (type === 'id') {
+          const name = document.getElementById('findName').value;
+          const res  = await fetch('/api/v1/auth/find-id', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name, email })
+          });
+          const data = await res.json();
+          if (res.ok) alert(`조회된 학번: ${data.student_id}`);
+          else        alert(data.detail);
+        } else {
+          const sid = document.getElementById('findStudentId').value;
+          const res = await fetch('/api/v1/auth/find-pw', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ student_id: sid, email })
+          });
+          const data = await res.json();
+          if (res.ok) alert(`${data.message}\n임시 비밀번호: ${data.temp_password}`);
+          else        alert(data.detail);
         }
-
-        async function handleFind(e) {
-            e.preventDefault();
-            const type = document.getElementById('findType').value;
-            const email = document.getElementById('findEmail').value;
-
-            try {
-                if (type === 'id') {
-                    const name = document.getElementById('findName').value;
-                    const res = await fetch('/api/v1/auth/find-id', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ name, email })
-                    });
-                    const data = await res.json();
-                    if (res.ok) alert(`조회된 학번: ${data.student_id}`);
-                    else alert(data.detail);
-                } else {
-                    const sid = document.getElementById('findStudentId').value;
-                    const res = await fetch('/api/v1/auth/find-pw', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ student_id: sid, email })
-                    });
-                    const data = await res.json();
-                    if (res.ok) alert(`${data.message}\n임시 비밀번호: ${data.temp_password}`);
-                    else alert(data.detail);
-                }
-            } catch (e) {
-                console.log(e);
-            }
-        }
-    </script>
+      } catch (err) {
+        console.error(err);
+      }
+    }
+  </script>
 </body>
-
 </html>

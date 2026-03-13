@@ -1,183 +1,406 @@
 <!DOCTYPE html>
 <html lang="ko">
-
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI 학사 비서 채팅</title>
-    <link rel="stylesheet" href="../../css/main.css">
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
-    <style>
-        .chat-container {
-            display: flex;
-            flex-direction: column;
-            height: 600px;
-            background: white;
-            border: 1px solid var(--border-color);
-            border-radius: 8px;
-            overflow: hidden;
-        }
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>무강대학교 AI 학사 비서</title>
+  <link rel="stylesheet" href="/css/style.css" />
+  <!-- dashboard.css 대신에 굳이 필요하지 않으면 배제하거나, 필요한 경우 추가하지만 챗봇 화면이므로 style.css 와 chatbot.css의 속성 응용 -->
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700&family=Inria+Serif&display=swap" rel="stylesheet" />
+  <style>
+    /* fe2 style.css 기본 변수 활용하여 풀스크린 챗봇 UI 구성 */
+    body {
+      margin: 0;
+      padding: 0;
+      background: #f0f2f7;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      font-family: 'Noto Sans KR', sans-serif;
+    }
 
-        .chat-history {
-            flex: 1;
-            padding: 20px;
-            overflow-y: auto;
-            background-color: #f8f9fa;
-        }
+    /* ─── HEADER ─── */
+    .header {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      height: var(--header-h, 80px);
+      background: var(--white, #ffffff);
+      border-bottom: 1px solid var(--border, #E2E2E2);
+      display: flex;
+      align-items: center;
+      padding: 0 40px;
+      z-index: 100;
+      box-shadow: 0 1px 4px rgba(21,39,71,0.06);
+    }
+    .logo-area { display: flex; align-items: center; gap: 14px; margin: 0 auto; }
+    .logo-circle { width: 52px; height: 52px; border-radius: 50%; background: var(--gray-light, #D9D9D9); display: flex; align-items: center; justify-content: center; }
+    .logo-img { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; }
+    .logo-text { display: none; }
 
-        .message {
-            margin-bottom: 15px;
-            max-width: 70%;
-            padding: 12px 16px;
-            border-radius: 8px;
-            line-height: 1.4;
-        }
+    /* ─── MAIN APP CONTINER ─── */
+    .app-container {
+      display: flex;
+      flex: 1;
+      margin-top: 80px;
+    }
 
-        .msg-ai {
-            background-color: var(--primary-color);
-            color: white;
-            align-self: flex-start;
-            border-bottom-left-radius: 0;
-        }
+    /* ─── SIDEBAR ─── */
+    .sidebar {
+      width: 220px;
+      background: var(--white, #ffffff);
+      border-right: 1px solid var(--border, #E2E2E2);
+      display: flex;
+      flex-direction: column;
+    }
+    .sidebar-profile {
+      background: var(--navy, #152747);
+      padding: 20px 20px 18px;
+    }
+    .student-info { display: flex; flex-direction: column; gap: 4px; }
+    .name { font-size: 18px; font-weight: 600; color: #ffffff; letter-spacing: -0.3px; }
+    .sidebar-nav { flex: 1; padding: 8px 0; }
+    .nav-item {
+      display: block; width: 100%; text-align: left; background: none; border: none; font-family: inherit;
+      padding: 13px 20px; font-size: 15px; font-weight: 500; color: var(--navy, #152747); cursor: pointer;
+      transition: background 0.15s ease;
+    }
+    .nav-item:hover { background: #eef2fb; }
+    .nav-item.active { background: #D5E3FF; font-weight: 600; border-left: 3px solid var(--navy, #152747); }
 
-        .msg-user {
-            background-color: #e3f2fd;
-            color: var(--text-main);
-            align-self: flex-end;
-            margin-left: auto;
-            border-bottom-right-radius: 0;
-        }
+    /* ─── CHAT AREA (대시보드 패널 대신 풀스크린 위젯 스타일) ─── */
+    .main-content {
+      flex: 1;
+      padding: 40px;
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+    }
 
-        .chat-input-area {
-            display: flex;
-            padding: 15px;
-            border-top: 1px solid var(--border-color);
-            background: white;
-        }
+    .chat-container {
+      width: 100%;
+      max-width: 800px;
+      height: 700px; /* 고정 높이 또는 화면 비율 */
+      background: var(--white, #ffffff);
+      border-radius: 16px;
+      box-shadow: 0 8px 40px rgba(21,39,71,0.08);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      border: 1px solid var(--border, #E2E2E2);
+    }
 
-        .chat-input-area input {
-            flex: 1;
-            padding: 12px;
-            border: 1px solid var(--border-color);
-            border-radius: 4px;
-            font-size: 1rem;
-        }
+    /* Chat Header */
+    .chatbot-header {
+      background: var(--navy, #152747);
+      color: #fff;
+      padding: 20px 24px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      flex-shrink: 0;
+    }
+    .chatbot-header-avatar {
+      width: 44px; height: 44px; border-radius: 50%; background: #D5E3FF; display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    }
+    .chatbot-header-avatar svg { width: 24px; height: 24px; color: var(--navy, #152747); }
+    .chatbot-header-info { flex: 1; }
+    .chatbot-header-title { font-size: 18px; font-weight: 700; line-height: 1.3; }
+    .chatbot-header-sub { font-size: 13px; color: rgba(255,255,255,0.7); margin-top: 2px; }
 
-        .btn-send {
-            background-color: var(--primary-color);
-            color: white;
-            border: none;
-            padding: 0 20px;
-            margin-left: 10px;
-            border-radius: 4px;
-            cursor: pointer;
-        }
-    </style>
+    /* Messages Box */
+    .chatbot-messages {
+      flex: 1;
+      overflow-y: auto;
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      background: #F3F7FF;
+      scrollbar-width: thin;
+      scrollbar-color: #B3B3B3 transparent;
+    }
+    .chatbot-messages::-webkit-scrollbar { width: 7px; }
+    .chatbot-messages::-webkit-scrollbar-thumb { background: #B3B3B3; border-radius: 6px; }
+
+    .chat-msg { display: flex; gap: 10px; align-items: flex-end; max-width: 100%; }
+    .chat-msg.bot { align-self: flex-start; }
+    .chat-msg.user { align-self: flex-end; flex-direction: row-reverse; }
+
+    .chat-msg-avatar { width: 34px; height: 34px; border-radius: 50%; background: var(--navy, #152747); display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-bottom: 2px; }
+    .chat-msg-avatar svg { width: 18px; height: 18px; color: #fff; }
+
+    .chat-bubble {
+      max-width: 500px;
+      padding: 14px 18px;
+      border-radius: 16px;
+      font-size: 15px;
+      line-height: 1.6;
+      word-break: keep-all;
+    }
+    .chat-msg.bot .chat-bubble { background: #fff; color: #152747; border-radius: 16px 16px 16px 4px; box-shadow: 0 1px 6px rgba(21,39,71,0.06); }
+    .chat-msg.user .chat-bubble { background: var(--navy, #152747); color: #fff; border-radius: 16px 16px 4px 16px; }
+
+    .chat-time { font-size: 11px; color: #aab0c0; margin-bottom: 2px; flex-shrink: 0; }
+    .chat-source { margin-top: 10px; padding-top: 8px; border-top: 1px solid #f0f0f0; font-size: 13px; color: #666; }
+    .chat-source a { color: #1565c0; text-decoration: none; }
+    .chat-source a:hover { text-decoration: underline; }
+
+    /* Typing Animation */
+    .chat-typing .chat-bubble { display: flex; gap: 5px; align-items: center; padding: 14px 20px; }
+    .typing-dot { width: 8px; height: 8px; border-radius: 50%; background: #b0b8cc; animation: typing-bounce 1.2s infinite ease-in-out; }
+    .typing-dot:nth-child(2) { animation-delay: 0.2s; }
+    .typing-dot:nth-child(3) { animation-delay: 0.4s; }
+    @keyframes typing-bounce { 0%, 60%, 100% { transform: translateY(0); } 30% { transform: translateY(-5px); } }
+
+    /* Input Area */
+    .chatbot-input-area {
+      padding: 16px 20px;
+      background: #fff;
+      border-top: 1px solid var(--border, #E2E2E2);
+      display: flex;
+      gap: 10px;
+      align-items: flex-end;
+      flex-shrink: 0;
+    }
+    .chatbot-input {
+      flex: 1;
+      border: 1px solid var(--border, #E2E2E2);
+      border-radius: 24px;
+      padding: 12px 18px;
+      font-size: 15px;
+      font-family: 'Noto Sans KR', sans-serif;
+      color: #152747;
+      background: #F3F7FF;
+      resize: none;
+      outline: none;
+      min-height: 46px;
+      max-height: 120px;
+      line-height: 1.5;
+      transition: border-color 0.15s;
+    }
+    .chatbot-input:focus { border-color: var(--navy, #152747); background: #fff; }
+    .chatbot-input::placeholder { color: #aab0c0; }
+
+    .chatbot-send-btn {
+      width: 46px; height: 46px; border-radius: 50%; background: var(--navy, #152747); color: #fff; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: background 0.15s, transform 0.12s;
+    }
+    .chatbot-send-btn:hover { background: #1e3460; transform: scale(1.05); }
+    .chatbot-send-btn:disabled { background: #c0c8d8; cursor: default; transform: none; }
+    .chatbot-send-btn svg { width: 22px; height: 22px; }
+  </style>
 </head>
-
 <body>
-    <div class="app-container">
-        <!-- 사이드바 -->
-        <aside class="sidebar">
-            <div class="sidebar-header">
-                <div class="student-info"><span class="name">임정현</span></div>
-            </div>
-            <nav class="sidebar-nav">
-                <button class="nav-item" onclick="location.href='dashboard.html'">뒤로 가기 (대시보드)</button>
-            </nav>
-        </aside>
-
-        <main class="main-content">
-            <header class="top-header">
-                <div class="logo-area">
-                    <h2>AI 학사행정 비서 (RAG)</h2>
-                </div>
-            </header>
-            <div class="content-area">
-                <div class="chat-container">
-                    <div class="chat-history">
-                        <div class="message msg-ai">안녕하세요! 무강대학교 AI 학사 비서입니다.<br>수강신청 규정이나 장학금 서류 등 궁금하신 점을 물어보세요! (예:
-                            "복수전공 조건이 뭐야?")</div>
-                    </div>
-                    <div class="chat-input-area">
-                        <input type="text" placeholder="질문을 입력하세요...">
-                        <button class="btn-send">전송</button>
-                    </div>
-                </div>
-            </div>
-        </main>
+  <!-- Header -->
+  <header class="header">
+    <div class="logo-area" style="margin: 0 auto;">
+      <div class="logo-circle">
+        <img src="/image/logo.png" alt="무강대학교 로고" class="logo-img" />
+      </div>
+      <div class="logo-text" style="display:none;">
+        <span class="logo-name">무강대학교</span>
+        <span class="logo-sub">Mugang University</span>
+      </div>
     </div>
-    <script>
-        const chatHistory = document.querySelector('.chat-history');
-        const inputField = document.querySelector('.chat-input-area input');
-        const sendBtn = document.querySelector('.btn-send');
+  </header>
 
-        // 탭 열때마다 고유한 세션 아이디 생성
-        const currentSessionId = 'sess_' + Math.random().toString(36).substr(2, 9);
+  <div class="app-container">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <div class="sidebar-profile">
+        <div class="student-info">
+          <span class="name" id="userName">-</span>
+        </div>
+      </div>
+      <nav class="sidebar-nav">
+        <button class="nav-item active" onclick="location.href='dashboard.html'">← 대시보드로 돌아가기</button>
+      </nav>
+    </aside>
 
-        async function sendMessage() {
-            const message = inputField.value.trim();
-            if (!message) return;
+    <main class="main-content">
+      <div class="chat-container">
+        <!-- Chat Header -->
+        <div class="chatbot-header">
+          <div class="chatbot-header-avatar">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round"
+                d="M9 3H5a2 2 0 00-2 2v4m6-6h10a2 2 0 012 2v4M9 3v18m0 0h10a2 2 0 002-2V9m-12 12H5a2 2 0 01-2-2V9m0 0h18"/>
+            </svg>
+          </div>
+          <div class="chatbot-header-info">
+            <div class="chatbot-header-title">AI 학사 비서 (RAG)</div>
+            <div class="chatbot-header-sub">무강대학교 공식 AI 봇</div>
+          </div>
+        </div>
 
-            // 1. 사용자 메시지 화면에 표시
-            const userMsgDiv = document.createElement('div');
-            userMsgDiv.className = 'message msg-user';
-            userMsgDiv.textContent = message;
-            chatHistory.appendChild(userMsgDiv);
+        <!-- Chat History -->
+        <div class="chatbot-messages" id="chatHistory">
+          <!-- Welcome Message -->
+        </div>
 
-            // 입력창 초기화 및 스크롤 내리기
-            inputField.value = '';
-            chatHistory.scrollTop = chatHistory.scrollHeight;
+        <!-- Chat Input -->
+        <div class="chatbot-input-area">
+          <textarea class="chatbot-input" id="inputField" placeholder="학사 규정이나 장학금 서류 등 궁금하신 점을 물어보세요..." rows="1" maxlength="500"></textarea>
+          <button class="chatbot-send-btn" id="sendBtn" disabled>
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M12 19V5m0 0l-7 7m7-7l7 7"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+    </main>
+  </div>
 
-            try {
-                // 2. 백엔드 AI 챗봇 API 호출
-                const response = await fetch('/api/v1/chat/ask', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        user_id: localStorage.getItem('user_no') || 'test_student',
-                        session_id: currentSessionId,
-                        message: message
-                    })
-                });
+  <script src="/js/app.js"></script>
+  <script>
+    const chatHistory = document.getElementById('chatHistory');
+    const inputField = document.getElementById('inputField');
+    const sendBtn = document.getElementById('sendBtn');
+    
+    const userId = localStorage.getItem('user_no');
+    
+    // 시간 표시 헬퍼
+    function nowTime() {
+      const d = new Date();
+      const h = String(d.getHours()).padStart(2, '0');
+      const m = String(d.getMinutes()).padStart(2, '0');
+      return `${h}:${m}`;
+    }
 
-                if (response.ok) {
-                    const data = await response.json();
+    // 초기 인사말 추가
+    function initWelcome() {
+      appendMsg('bot', '안녕하세요! 무강대학교 AI 학사 비서입니다.<br>수강신청이나 장학금 관련 사항에 대해 언제든지 편하게 질문해 주세요! (예: "복수전공 자격 조건 알려줘")');
+    }
 
-                    // 3. AI 답변 화면에 표시
-                    const aiMsgDiv = document.createElement('div');
-                    aiMsgDiv.className = 'message msg-ai';
-                    aiMsgDiv.textContent = data.reply;
+    // 유저/봇 메시지 추가 
+    function appendMsg(role, text, sources = null) {
+      const wrap = document.createElement('div');
+      wrap.className = `chat-msg ${role}`;
 
-                    // 출처(Source)가 있으면 같이 표시
-                    if (data.sources && data.sources.length > 0) {
-                        const sourceP = document.createElement('p');
-                        sourceP.style.fontSize = '0.8rem';
-                        sourceP.style.marginTop = '10px';
-                        sourceP.innerHTML = `참고 문서: <a href="${data.sources[0].url}" style="color: #bbdefb">${data.sources[0].title}</a>`;
-                        aiMsgDiv.appendChild(sourceP);
-                    }
+      if (role === 'bot') {
+        const av = document.createElement('div');
+        av.className = 'chat-msg-avatar';
+        av.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+        </svg>`;
+        wrap.appendChild(av);
+      }
 
-                    chatHistory.appendChild(aiMsgDiv);
-                } else {
-                    throw new Error('Server Return Error');
-                }
-            } catch (error) {
-                const errorMsgDiv = document.createElement('div');
-                errorMsgDiv.className = 'message msg-ai';
-                errorMsgDiv.textContent = "AI 서버 연결에 실패했습니다. (백엔드가 켜져있는지 확인해주세요)";
-                errorMsgDiv.style.backgroundColor = 'red';
-                chatHistory.appendChild(errorMsgDiv);
-            }
+      const bubble = document.createElement('div');
+      bubble.className = 'chat-bubble';
+      bubble.innerHTML = text;
 
-            chatHistory.scrollTop = chatHistory.scrollHeight;
-        }
+      // 소스 (RAG 문서 출처) 첨부
+      if (sources && sources.length > 0) {
+        const sourceDiv = document.createElement('div');
+        sourceDiv.className = 'chat-source';
+        sourceDiv.innerHTML = `📄 참고 문서: <a href="${sources[0].url}" target="_blank">${sources[0].title}</a>`;
+        bubble.appendChild(sourceDiv);
+      }
 
-        sendBtn.addEventListener('click', sendMessage);
-        inputField.addEventListener('keypress', function (e) {
-            if (e.key === 'Enter') sendMessage();
+      wrap.appendChild(bubble);
+
+      const time = document.createElement('span');
+      time.className = 'chat-time';
+      time.textContent = nowTime();
+      wrap.appendChild(time);
+
+      chatHistory.appendChild(wrap);
+      chatHistory.scrollTop = chatHistory.scrollHeight;
+      return wrap;
+    }
+
+    // 타이핑 인디케이터
+    function showTyping() {
+      const wrap = document.createElement('div');
+      wrap.className = 'chat-msg bot chat-typing';
+      wrap.id = 'typingIndicator';
+
+      const av = document.createElement('div');
+      av.className = 'chat-msg-avatar';
+      av.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+      </svg>`;
+      wrap.appendChild(av);
+
+      const bubble = document.createElement('div');
+      bubble.className = 'chat-bubble';
+      bubble.innerHTML = '<span class="typing-dot"></span><span class="typing-dot"></span><span class="typing-dot"></span>';
+      wrap.appendChild(bubble);
+
+      chatHistory.appendChild(wrap);
+      chatHistory.scrollTop = chatHistory.scrollHeight;
+      return wrap;
+    }
+
+    const currentSessionId = 'sess_' + Math.random().toString(36).substr(2, 9);
+
+    async function sendMessage() {
+      const message = inputField.value.trim();
+      if (!message) return;
+
+      inputField.value = '';
+      inputField.style.height = 'auto';
+      sendBtn.disabled = true;
+
+      appendMsg('user', message);
+      const typing = showTyping();
+
+      try {
+        const response = await fetch('/api/v1/chat/ask', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            user_id: userId || 'test_student',
+            session_id: currentSessionId,
+            message: message
+          })
         });
-    </script>
-</body>
 
+        typing.remove();
+
+        if (response.ok) {
+          const data = await response.json();
+          appendMsg('bot', data.reply.replace(/\n/g, '<br>'), data.sources);
+        } else {
+          appendMsg('bot', '❌ 앗, 서버 처리에 문제가 생겼습니다. 다시 시도해주세요.');
+        }
+      } catch (error) {
+        typing.remove();
+        appendMsg('bot', '❌ AI 서버 연결에 실패했습니다. (백엔드 상태를 점검해주세요.)');
+      }
+
+      sendBtn.disabled = inputField.value.trim().length === 0;
+    }
+
+    sendBtn.addEventListener('click', sendMessage);
+    inputField.addEventListener('keypress', function (e) {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        if (!sendBtn.disabled) sendMessage();
+      }
+    });
+
+    inputField.addEventListener('input', () => {
+      sendBtn.disabled = inputField.value.trim().length === 0;
+      inputField.style.height = 'auto';
+      inputField.style.height = Math.min(inputField.scrollHeight, 120) + 'px';
+    });
+
+    // 유저 정보 가져오기 시도 (app.js 프로필 로드 함수를 벤치마크)
+    if(userId) {
+       fetch(`/api/v1/users/${userId}`)
+         .then(r => r.ok ? r.json() : null)
+         .then(data => {
+            if(data && data.name) {
+               document.getElementById('userName').innerText = data.name;
+            }
+         });
+    }
+
+    // 화면 로드 시 시작
+    window.addEventListener('DOMContentLoaded', () => {
+       initWelcome();
+    });
+  </script>
+</body>
 </html>

@@ -1,360 +1,553 @@
 <!DOCTYPE html>
 <html lang="ko">
-
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>무강대학교 - 수업 개설 관리</title>
-    <link rel="stylesheet" href="../../css/main.css">
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
-    <style>
-        .sidebar-header {
-            background-color: #37474f;
-        }
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>수업 개설 관리 - 무강대학교</title>
+  <link rel="stylesheet" href="/css/style.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700&family=Inria+Serif&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+  <style>
+    /* ─── from dashboard.css ─────────────────── */
+    .table-section {
+      background: var(--white); border: 1px solid var(--border); border-radius: 6px;
+      margin-bottom: 24px; overflow: hidden; box-shadow: 0 1px 4px rgba(21,39,71,0.05);
+      animation: fadeInUp 0.3s ease both;
+    }
+    .table-section:nth-child(3) { animation-delay: 0.1s; }
+    .section-header { background: var(--blue-bg); padding: 14px 20px; border-bottom: 1px solid var(--border); }
+    .section-title  { font-size: 15px; font-weight: 700; color: var(--navy); letter-spacing: -0.2px; }
+    .table-wrapper { position: relative; overflow-x: auto; max-height: 320px; overflow-y: auto; }
+    .table-wrapper::-webkit-scrollbar { width: 7px; height: 7px; }
+    .table-wrapper::-webkit-scrollbar-track { background: transparent; }
+    .table-wrapper::-webkit-scrollbar-thumb { background: var(--scrollbar); border-radius: 18px; }
+    .table-wrapper::-webkit-scrollbar-thumb:hover { background: #999; }
+    .data-table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+    .data-table thead { position: sticky; top: 0; z-index: 10; background: var(--blue-bg); }
+    .data-table thead tr { background: var(--blue-bg); }
+    .data-table th { padding: 11px 14px; font-weight: 600; color: var(--navy); font-size: 13px; text-align: left; border-bottom: 1px solid var(--border); white-space: nowrap; }
+    .data-table th:nth-child(6), .data-table th:nth-child(7), .data-table th:nth-child(8) { text-align: center; }
+    .data-table tbody tr { border-bottom: 1px solid #f0f0f0; transition: background 0.1s ease; }
+    .data-table tbody tr:hover { background: #f8faff; }
+    .data-table tbody tr:last-child { border-bottom: none; }
+    .data-table td { padding: 10px 14px; color: #1a1a1a; vertical-align: middle; white-space: nowrap; }
+    .data-table td.center { text-align: center; }
+    .toast {
+      position: fixed; bottom: 30px; left: 50%;
+      transform: translateX(-50%) translateY(20px);
+      background: var(--navy); color: var(--white); padding: 12px 24px;
+      border-radius: 8px; font-size: 14px; font-weight: 500;
+      box-shadow: 0 4px 16px rgba(21,39,71,0.25); opacity: 0;
+      transition: opacity 0.3s ease, transform 0.3s ease;
+      pointer-events: none; z-index: 9999; white-space: nowrap;
+    }
+    .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+    @media (max-width: 900px) { .sidebar { width: 180px; } .content { margin-left: 180px; padding: 16px; } }
+    @media (max-width: 640px) { .sidebar { display: none; } .content { margin-left: 0; } }
+    @keyframes fadeInUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+    .nav-item { animation: fadeIn 0.3s ease both; }
+    .nav-item.active { background: #D5E3FF; }
+    .nav-item:nth-child(1) { animation-delay: 0.05s; }
+    .nav-item:nth-child(2) { animation-delay: 0.10s; }
+    .nav-item:nth-child(3) { animation-delay: 0.15s; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateX(-8px); } to { opacity: 1; transform: translateX(0); } }
 
-        .logo-area h1 {
-            color: #37474f;
-        }
-    </style>
+    /* ─── 업로드 카드 ─── */
+    .upload-card {
+      padding: 22px 24px;
+      border-radius: 8px;
+      margin-bottom: 16px;
+      border: 1px solid;
+    }
+    .upload-card.csv  { background: #fff8f0; border-color: #ffcc80; }
+    .upload-card.pdf  { background: #f1f8f2; border-color: #a5d6a7; }
+
+    .upload-card h3 {
+      margin: 0 0 8px;
+      font-size: 1rem;
+      font-weight: 700;
+    }
+    .upload-card.csv h3 { color: #e65100; }
+    .upload-card.pdf h3 { color: #2e7d32; }
+
+    .upload-card p {
+      font-size: 0.85rem;
+      color: #666;
+      margin-bottom: 14px;
+      line-height: 1.6;
+    }
+
+    .upload-row {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .upload-row input[type="file"] {
+      flex: 1;
+      padding: 9px 12px;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      font-size: 0.9rem;
+      background: white;
+      font-family: 'Noto Sans KR', sans-serif;
+    }
+
+    .btn-upload-csv {
+      padding: 9px 20px;
+      background: #ef6c00;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      font-size: 0.88rem;
+      font-weight: 600;
+      cursor: pointer;
+      font-family: 'Noto Sans KR', sans-serif;
+      white-space: nowrap;
+      transition: background .2s;
+    }
+    .btn-upload-csv:hover    { background: #e65100; }
+    .btn-upload-csv:disabled { background: #ccc; cursor: not-allowed; }
+
+    .btn-upload-pdf {
+      padding: 9px 20px;
+      background: #388e3c;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      font-size: 0.88rem;
+      font-weight: 600;
+      cursor: pointer;
+      font-family: 'Noto Sans KR', sans-serif;
+      white-space: nowrap;
+      transition: background .2s;
+    }
+    .btn-upload-pdf:hover    { background: #2e7d32; }
+    .btn-upload-pdf:disabled { background: #ccc; cursor: not-allowed; }
+
+    /* ─── 개설 폼 카드 ─── */
+    .form-card {
+      background: white;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 24px;
+      margin-bottom: 16px;
+      box-shadow: 0 1px 4px rgba(21,39,71,0.05);
+    }
+
+    .form-card h3 {
+      margin: 0 0 18px;
+      font-size: 1rem;
+      font-weight: 700;
+      color: #152747;
+      border-bottom: 2px solid var(--blue-accent);
+      padding-bottom: 10px;
+    }
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+      margin-bottom: 18px;
+    }
+
+    .form-grid label,
+    .time-grid label {
+      display: block;
+      font-size: 0.83rem;
+      font-weight: 600;
+      color: #152747;
+      margin-bottom: 5px;
+    }
+
+    .form-grid input,
+    .form-grid select,
+    .time-grid input,
+    .time-grid select {
+      width: 100%;
+      padding: 9px 12px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      font-size: 0.9rem;
+      font-family: 'Noto Sans KR', sans-serif;
+      box-sizing: border-box;
+      transition: border-color .2s;
+    }
+
+    .form-grid input:focus,
+    .form-grid select:focus,
+    .time-grid input:focus,
+    .time-grid select:focus {
+      outline: none;
+      border-color: #152747;
+    }
+
+    .credit-pair {
+      display: flex;
+      gap: 8px;
+    }
+    .credit-pair input { flex: 1; }
+
+    .form-subheading {
+      font-size: 0.88rem;
+      font-weight: 600;
+      color: #555;
+      margin: 4px 0 12px;
+    }
+
+    .time-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+      margin-bottom: 18px;
+    }
+
+    .btn-create {
+      width: 100%;
+      padding: 12px;
+      background: #152747;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 1rem;
+      font-weight: 700;
+      cursor: pointer;
+      font-family: 'Noto Sans KR', sans-serif;
+      transition: background .2s;
+    }
+    .btn-create:hover { background: #1e3460; }
+
+    /* ─── 강의 목록 테이블 내 삭제 버튼 ─── */
+    .btn-delete {
+      padding: 4px 12px;
+      background: #c0392b;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      cursor: pointer;
+      font-family: 'Noto Sans KR', sans-serif;
+      transition: background .15s;
+    }
+    .btn-delete:hover { background: #a93226; }
+  </style>
 </head>
-
 <body>
-    <div class="app-container">
-        <!-- 사이드바 -->
-        <aside class="sidebar">
-            <div class="sidebar-header">
-                <div class="student-info">
-                    <span class="name"></span>
-                    <span class="id"></span>
-                </div>
-                <div class="department-info">
-                    <p></p>
-                    <p class="sub-dept"></p>
-                </div>
-            </div>
-            <nav class="sidebar-nav">
-                <button class="nav-item" onclick="location.href='enrollment_schedule.html'">수강신청 기간 설정</button>
-                <button class="nav-item active" onclick="location.href='course_management.html'">개설 관리</button>
-                <button class="nav-item" onclick="location.href='rag_update.html'">AI 학사 규정</button>
-                <button class="nav-item" onclick="location.href='server_management.html'">서버 관리</button>
-                <button class="nav-item logout-btn" onclick="logout()">로그아웃</button>
-            </nav>
-        </aside>
-
-        <!-- 메인 콘텐츠 영역 -->
-        <main class="main-content">
-            <header class="top-header">
-                <div class="logo-area">
-                    <h1>무강대학교 - 수업 개설 관리</h1>
-                </div>
-            </header>
-
-            <div class="content-area">
-                <div id="panel-courses" class="panel active">
-
-                    <!-- CSV 일괄 업로드 (Batch Insert) 영역 -->
-                    <section class="list-section"
-                        style="margin-bottom: 20px; background: #fff3e0; padding: 20px; border-radius: 8px; border: 1px solid #ffcc80;">
-                        <h3 style="color:#e65100;">📁 다중 강의 CSV 일괄 개설 (Batch Upload)</h3>
-                        <p style="font-size: 0.9rem; color: #666; margin-bottom: 15px;">관리자가 엑셀로 미리 작성해둔 시간표
-                            데이터(.csv)를 한 번에 업로드하여 트랜잭션 과부하 없이 생성합니다.</p>
-                        <form id="batchUploadForm" onsubmit="handleBatchUpload(event)"
-                            style="display:flex; gap: 10px; align-items:center;">
-                            <input type="file" id="csvFileInput" accept=".csv" required
-                                style="padding: 10px; border: 1px solid #ccc; border-radius: 4px; flex: 1; background:white;">
-                            <button type="submit" class="btn-approve" style="background:#ef6c00;">CSV 파일 서버로
-                                전송</button>
-                        </form>
-                    </section>
-
-                    <!-- PDF 강의계획서 자동 파싱 업로드 -->
-                    <section class="list-section"
-                        style="margin-bottom: 20px; background: #e8f5e9; padding: 20px; border-radius: 8px; border: 1px solid #a5d6a7;">
-                        <h3 style="color:#2e7d32;">📄 PDF 학사 일정표 데이터 AI 자동 추출 등록</h3>
-                        <p style="font-size: 0.9rem; color: #666; margin-bottom: 15px;">학교 공식 강의시간표 문서(.pdf) 원본을 그대로
-                            올리면, 백엔드 서버가 `pdfplumber`를 이용해 문서를 파싱하고 시간표/교과목 데이터를 추출해 일괄 적재합니다.</p>
-                        <form id="pdfUploadForm" onsubmit="handlePdfUpload(event)"
-                            style="display:flex; gap: 10px; align-items:center;">
-                            <input type="file" id="pdfFileInput" accept=".pdf" required
-                                style="padding: 10px; border: 1px solid #ccc; border-radius: 4px; flex: 1; background:white;">
-                            <button type="submit" class="btn-approve" style="background:#43a047;">PDF 전송 및 파싱
-                                시작</button>
-                        </form>
-                    </section>
-
-                    <!-- 개별 강의 개설 -->
-                    <section class="list-section"
-                        style="margin-bottom: 30px; background: white; padding: 20px; border-radius: 8px;">
-                        <h3>📝 개별 새로운 강의 개설</h3>
-                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 15px;">
-                            <div><label>과목명</label><input type="text" id="course-subject"
-                                    style="width:100%; padding:8px;"></div>
-                            <div><label>단과대학</label><input type="text" id="course-college"
-                                    style="width:100%; padding:8px;"></div>
-                            <div><label>개설학과</label><input type="text" id="course-department"
-                                    style="width:100%; padding:8px;"></div>
-                            <div><label>수강구분 (전공필수 등)</label><input type="text" id="course-type"
-                                    style="width:100%; padding:8px;"></div>
-                            <div><label>강의실</label><input type="text" id="course-room"
-                                    style="width:100%; padding:8px;"></div>
-                            <div><label>학점 / 정원</label>
-                                <div style="display: flex; gap:10px;">
-                                    <input type="number" id="course-credit" placeholder="학점" value="3"
-                                        style="width:100%; padding:8px;">
-                                    <input type="number" id="course-capacity" placeholder="정원" value="40"
-                                        style="width:100%; padding:8px;">
-                                </div>
-                            </div>
-                        </div>
-
-                        <h4 style="margin-top:20px; color:#555;">시간표 설정 (최대 2개 시간대 지원)</h4>
-                        <div style="display: flex; gap: 15px; margin-top: 10px; align-items: flex-end;">
-                            <div style="flex:1;">
-                                <label>요일 1</label>
-                                <select id="course-day-1" style="width:100%; padding:8px;">
-                                    <option value="">선택안함</option>
-                                    <option value="1">월요일</option>
-                                    <option value="2">화요일</option>
-                                    <option value="3">수요일</option>
-                                    <option value="4">목요일</option>
-                                    <option value="5">금요일</option>
-                                </select>
-                            </div>
-                            <div style="flex:1;">
-                                <label>시간 1 (0:9시~, 1:10시~...)</label>
-                                <input type="number" id="course-time-1" min="0" max="9"
-                                    style="width:100%; padding:8px;">
-                            </div>
-                            <div style="flex:1;">
-                                <label>요일 2</label>
-                                <select id="course-day-2" style="width:100%; padding:8px;">
-                                    <option value="">선택안함</option>
-                                    <option value="1">월요일</option>
-                                    <option value="2">화요일</option>
-                                    <option value="3">수요일</option>
-                                    <option value="4">목요일</option>
-                                    <option value="5">금요일</option>
-                                </select>
-                            </div>
-                            <div style="flex:1;">
-                                <label>시간 2 (0:9시~, 1:10시~...)</label>
-                                <input type="number" id="course-time-2" min="0" max="9"
-                                    style="width:100%; padding:8px;">
-                            </div>
-                        </div>
-                        <button class="btn-approve" onclick="createAdminCourse()"
-                            style="margin-top: 20px; width: 100%; padding: 12px; font-size: 1.1rem;">강의 모듈
-                            생성</button>
-                    </section>
-
-                    <!-- 전체 강의 목록 -->
-                    <section class="list-section">
-                        <h2>개설된 전체 강의 목록</h2>
-                        <div class="table-wrapper">
-                            <table class="data-table">
-                                <thead>
-                                    <tr>
-                                        <th>단과대학</th>
-                                        <th>개설학과</th>
-                                        <th>과목명</th>
-                                        <th>분류</th>
-                                        <th>강의실</th>
-                                        <th>학점</th>
-                                        <th>정원</th>
-                                        <th>관리</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="admin-courses-tbody">
-                                    <!-- JS 동적 렌더링 -->
-                                </tbody>
-                            </table>
-                        </div>
-                    </section>
-                </div>
-            </div>
-        </main>
+  <!-- Header -->
+  <header class="header">
+    <div class="logo-area">
+      <img src="/image/logo.png" alt="무강대학교 로고" class="logo-img" />
     </div>
+  </header>
 
-    <script>
-        function showCustomModal(title, message, isError = false) {
-            alert(`[${title}] ${message}`);
+  <div class="main-layout">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <div class="sidebar-profile">
+        <div class="profile-top">
+          <span class="profile-name" id="staff-name">정보전산관리부</span>
+        </div>
+        <div class="profile-divider"></div>
+        <div class="profile-dept" id="staff-dept">임정현<br />아동가족복지학과 담당</div>
+      </div>
+      <nav class="sidebar-nav">
+        <a href="/pages/admin/enrollment_schedule.html" class="nav-item">수강신청 스케줄</a>
+        <a href="/pages/admin/course_management.html" class="nav-item active">개설 관리</a>
+        <a href="/pages/admin/server_management.html" class="nav-item">서버 관리</a>
+        <a href="/index.html" class="nav-item logout">로그아웃</a>
+      </nav>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="content">
+
+      <!-- CSV 일괄 업로드 -->
+      <div class="upload-card csv">
+        <h3>📁 다중 강의 CSV 일괄 개설 (Batch Upload)</h3>
+        <p>관리자가 엑셀로 미리 작성해둔 시간표 데이터(.csv)를 한 번에 업로드하여 트랜잭션 과부하 없이 생성합니다.</p>
+        <form id="batchUploadForm" onsubmit="handleBatchUpload(event)">
+          <div class="upload-row">
+            <input type="file" id="csvFileInput" accept=".csv" required />
+            <button type="submit" class="btn-upload-csv">CSV 파일 서버로 전송</button>
+          </div>
+        </form>
+      </div>
+
+      <!-- PDF 자동 파싱 업로드 -->
+      <div class="upload-card pdf">
+        <h3>📄 PDF 학사 일정표 데이터 AI 자동 추출 등록</h3>
+        <p>학교 공식 강의시간표 문서(.pdf) 원본을 그대로 올리면, 백엔드 서버가 <code>pdfplumber</code>를 이용해 문서를 파싱하고 시간표/교과목 데이터를 추출해 일괄 적재합니다.</p>
+        <form id="pdfUploadForm" onsubmit="handlePdfUpload(event)">
+          <div class="upload-row">
+            <input type="file" id="pdfFileInput" accept=".pdf" required />
+            <button type="submit" class="btn-upload-pdf">PDF 전송 및 파싱 시작</button>
+          </div>
+        </form>
+      </div>
+
+      <!-- 개별 강의 개설 폼 -->
+      <div class="form-card">
+        <h3>📝 개별 새로운 강의 개설</h3>
+
+        <div class="form-grid">
+          <div>
+            <label>과목명</label>
+            <input type="text" id="course-subject" placeholder="예: 인간행동과 사회환경" />
+          </div>
+          <div>
+            <label>단과대학</label>
+            <input type="text" id="course-college" placeholder="예: 사회과학대학" />
+          </div>
+          <div>
+            <label>개설학과</label>
+            <input type="text" id="course-department" placeholder="예: 아동가족복지학과" />
+          </div>
+          <div>
+            <label>수강구분</label>
+            <input type="text" id="course-type" placeholder="예: 전공필수" />
+          </div>
+          <div>
+            <label>강의실</label>
+            <input type="text" id="course-room" placeholder="예: 대강당" />
+          </div>
+          <div>
+            <label>학점 / 정원</label>
+            <div class="credit-pair">
+              <input type="number" id="course-credit" placeholder="학점" value="3" min="1" />
+              <input type="number" id="course-capacity" placeholder="정원" value="40" min="1" />
+            </div>
+          </div>
+        </div>
+
+        <p class="form-subheading">시간표 설정 (최대 2개 시간대 지원)</p>
+        <div class="time-grid">
+          <div>
+            <label>요일 1</label>
+            <select id="course-day-1">
+              <option value="">선택안함</option>
+              <option value="1">월요일</option>
+              <option value="2">화요일</option>
+              <option value="3">수요일</option>
+              <option value="4">목요일</option>
+              <option value="5">금요일</option>
+            </select>
+          </div>
+          <div>
+            <label>시간 1 (0: 9시~, 1: 10시~…)</label>
+            <input type="number" id="course-time-1" min="0" max="9" placeholder="0" />
+          </div>
+          <div>
+            <label>요일 2</label>
+            <select id="course-day-2">
+              <option value="">선택안함</option>
+              <option value="1">월요일</option>
+              <option value="2">화요일</option>
+              <option value="3">수요일</option>
+              <option value="4">목요일</option>
+              <option value="5">금요일</option>
+            </select>
+          </div>
+          <div>
+            <label>시간 2 (0: 9시~, 1: 10시~…)</label>
+            <input type="number" id="course-time-2" min="0" max="9" placeholder="0" />
+          </div>
+        </div>
+
+        <button class="btn-create" onclick="createAdminCourse()">강의 모듈 생성</button>
+      </div>
+
+      <!-- 전체 강의 목록 -->
+      <section class="table-section">
+        <div class="section-header">
+          <h2 class="section-title">개설된 전체 강의 목록</h2>
+        </div>
+        <div class="table-wrapper">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>단과대학</th>
+                <th>개설학과</th>
+                <th>과목명</th>
+                <th>분류</th>
+                <th>강의실</th>
+                <th>학점</th>
+                <th>정원</th>
+                <th>관리</th>
+              </tr>
+            </thead>
+            <tbody id="admin-courses-tbody">
+              <tr>
+                <td colspan="8" style="text-align:center; color:#aaa; padding:20px;">강의 목록을 불러오는 중...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script>
+    // 사이드바 프로필 로드
+    (async () => {
+      const userId = localStorage.getItem('user_no');
+      if (!userId) return;
+      try {
+        const res = await fetch(`/api/v1/users/${userId}`);
+        if (res.ok) {
+          const p = await res.json();
+          const nameEl = document.getElementById('staff-name');
+          const deptEl = document.getElementById('staff-dept');
+          if (nameEl) nameEl.textContent = p.name || '정보전산관리부';
+          if (deptEl) deptEl.innerHTML   = `${p.college || ''}<br />${p.depart || ''} 담당`;
+        }
+      } catch (e) { console.error('프로필 로드 오류:', e); }
+    })();
+
+    async function handleBatchUpload(e) {
+      e.preventDefault();
+      const fileInput = document.getElementById('csvFileInput');
+      if (!fileInput.files.length) { alert('업로드할 CSV 파일을 선택해주세요.'); return; }
+
+      const formData = new FormData();
+      formData.append('file', fileInput.files[0]);
+
+      try {
+        const res  = await fetch('/api/v1/admin/courses/batch', { method: 'POST', body: formData });
+        const data = await res.json();
+        if (res.ok) {
+          alert(`일괄 등록이 완료되었습니다.\n${data.message}`);
+          loadAdminCourses();
+          fileInput.value = '';
+        } else {
+          alert('업로드 실패: ' + data.detail);
+        }
+      } catch (e) {
+        console.error(e);
+        alert('일괄 업로드 중 시스템 오류가 발생했습니다.');
+      }
+    }
+
+    async function handlePdfUpload(e) {
+      e.preventDefault();
+      const fileInput = document.getElementById('pdfFileInput');
+      if (!fileInput.files.length) { alert('업로드할 PDF 파일을 선택해주세요.'); return; }
+
+      const formData = new FormData();
+      formData.append('file', fileInput.files[0]);
+
+      const btn = e.target.querySelector('button');
+      const orig = btn.innerText;
+      btn.innerText = '파싱 및 등록 중...';
+      btn.disabled  = true;
+
+      try {
+        const res  = await fetch('/api/v1/admin/courses/upload-pdf', { method: 'POST', body: formData });
+        const data = await res.json();
+        if (res.ok) {
+          alert('파싱 성공: ' + data.message);
+          loadAdminCourses();
+          fileInput.value = '';
+        } else {
+          alert('파싱 실패: ' + data.detail);
+        }
+      } catch (e) {
+        console.error(e);
+        alert('PDF 파싱 중 시스템 오류가 발생했습니다.');
+      } finally {
+        btn.innerText = orig;
+        btn.disabled  = false;
+      }
+    }
+
+    async function loadAdminCourses() {
+      try {
+        const res = await fetch('/api/v1/lectures');
+        if (!res.ok) return;
+        const data  = await res.json();
+        const tbody = document.getElementById('admin-courses-tbody');
+
+        if (!data.lectures?.length) {
+          tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; color:#aaa; padding:20px;">개설된 강의가 없습니다.</td></tr>';
+          return;
         }
 
-        document.addEventListener('DOMContentLoaded', async () => {
-            const token = localStorage.getItem('access_token');
-            const role = localStorage.getItem('role');
-            const userId = localStorage.getItem('user_no');
+        tbody.innerHTML = data.lectures.map(c => `
+          <tr>
+            <td>${c.college || '-'}</td>
+            <td>${c.department || '-'}</td>
+            <td><strong>${c.subject}</strong></td>
+            <td>${c.type || '-'}</td>
+            <td>${c.classroom || '-'}</td>
+            <td class="center">${c.credit}</td>
+            <td class="center">${c.capacity}</td>
+            <td class="center">
+              <button class="btn-delete" onclick="deleteAdminCourse('${c.lecture_id}')">삭제</button>
+            </td>
+          </tr>
+        `).join('');
+      } catch (e) { console.error(e); }
+    }
 
-            if (!token || role !== 'STAFF') {
-                window.location.href = '../auth/login.html';
-                return;
-            }
+    async function createAdminCourse() {
+      const payload = {
+        subject:      document.getElementById('course-subject').value,
+        college:      document.getElementById('course-college').value,
+        department:   document.getElementById('course-department').value,
+        course_type:  document.getElementById('course-type').value,
+        room:         document.getElementById('course-room').value,
+        credit:       parseInt(document.getElementById('course-credit').value) || 3,
+        capacity:     parseInt(document.getElementById('course-capacity').value) || 40,
+        professor_id: localStorage.getItem('user_no'),
+        times: []
+      };
 
-            try {
-                const profileRes = await fetch(`/api/v1/users/${userId}`);
-                if (profileRes.ok) {
-                    const profile = await profileRes.json();
-                    document.querySelector('.sidebar-header .name').innerText = profile.name;
-                    document.querySelector('.sidebar-header .id').innerText = profile.student_id;
-                    document.querySelector('.department-info p').innerText = profile.college || '-';
-                    document.querySelector('.department-info .sub-dept').innerText = profile.depart || '-';
-                }
-            } catch (err) {
-                console.error("프로필 로드 오류:", err);
-            }
+      if (!payload.subject) { alert('과목명은 필수입니다.'); return; }
 
-            loadAdminCourses();
+      const day1  = document.getElementById('course-day-1').value;
+      const time1 = document.getElementById('course-time-1').value;
+      if (day1 && time1 !== '') payload.times.push({ day: parseInt(day1), time: parseInt(time1) });
+
+      const day2  = document.getElementById('course-day-2').value;
+      const time2 = document.getElementById('course-time-2').value;
+      if (day2 && time2 !== '') payload.times.push({ day: parseInt(day2), time: parseInt(time2) });
+
+      try {
+        const res = await fetch('/api/v1/admin/courses', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
         });
-
-        async function handleBatchUpload(e) {
-            e.preventDefault();
-            const fileInput = document.getElementById('csvFileInput');
-            if (fileInput.files.length === 0) return showCustomModal("경고", "업로드할 CSV 파일을 선택해주세요.", true);
-
-            const formData = new FormData();
-            formData.append('file', fileInput.files[0]);
-
-            try {
-                const res = await fetch('/api/v1/admin/courses/batch', {
-                    method: 'POST',
-                    body: formData
-                });
-                const data = await res.json();
-                if (res.ok) {
-                    showCustomModal("성공", `일괄 등록이 완료되었습니다.\n${data.message}`);
-                    loadAdminCourses();
-                    fileInput.value = '';
-                } else {
-                    showCustomModal("업로드 실패", data.detail, true);
-                }
-            } catch (err) {
-                console.error(err);
-                showCustomModal("서버 오류", "일괄 업로드 중 시스템 오류가 발생했습니다.", true);
-            }
+        if (res.ok) {
+          alert('강의가 성공적으로 개설되었습니다.');
+          loadAdminCourses();
+          document.querySelectorAll('.form-card input[type=text], .form-card input[type=number]')
+            .forEach(el => el.value = '');
+          document.querySelectorAll('.form-card select')
+            .forEach(el => el.value = '');
+        } else {
+          const err = await res.json();
+          alert('개설 실패: ' + err.detail);
         }
+      } catch (e) { console.error(e); }
+    }
 
-        async function handlePdfUpload(e) {
-            e.preventDefault();
-            const fileInput = document.getElementById('pdfFileInput');
-            if (fileInput.files.length === 0) return showCustomModal("경고", "업로드할 PDF 파일을 선택해주세요.", true);
-
-            const formData = new FormData();
-            formData.append('file', fileInput.files[0]);
-
-            const btn = e.target.querySelector('button');
-            const originalText = btn.innerText;
-            btn.innerText = "파싱 및 등록 중...";
-            btn.disabled = true;
-
-            try {
-                const res = await fetch('/api/v1/admin/courses/upload-pdf', {
-                    method: 'POST',
-                    body: formData
-                });
-                const data = await res.json();
-                if (res.ok) {
-                    showCustomModal("파싱 성공", data.message);
-                    loadAdminCourses();
-                    fileInput.value = '';
-                } else {
-                    showCustomModal("파싱 실패", data.detail, true);
-                }
-            } catch (err) {
-                console.error(err);
-                showCustomModal("서버 오류", "PDF 파싱 중 시스템 오류가 발생했습니다.", true);
-            } finally {
-                btn.innerText = originalText;
-                btn.disabled = false;
-            }
+    async function deleteAdminCourse(id) {
+      if (!confirm('해당 강의를 삭제하시겠습니까? (이 연산은 복구 불가능합니다)')) return;
+      try {
+        const res = await fetch(`/api/v1/admin/courses/${id}`, { method: 'DELETE' });
+        if (res.ok) {
+          alert('삭제 완료되었습니다.');
+          loadAdminCourses();
+        } else {
+          alert('삭제 중 오류가 발생했습니다.');
         }
+      } catch (e) { console.error(e); }
+    }
 
-        async function loadAdminCourses() {
-            try {
-                const res = await fetch('/api/v1/lectures');
-                if (!res.ok) return;
-                const data = await res.json();
-                const tbody = document.getElementById('admin-courses-tbody');
-                tbody.innerHTML = '';
-                if (data.lectures.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;">개설된 강의가 없습니다.</td></tr>';
-                    return;
-                }
-                data.lectures.forEach(c => {
-                    const tr = document.createElement('tr');
-                    tr.innerHTML = `
-                        <td>${c.college || '-'}</td>
-                        <td>${c.department || '-'}</td>
-                        <td><strong>${c.subject}</strong></td>
-                        <td>${c.type || '-'}</td>
-                        <td>${c.classroom || '-'}</td>
-                        <td>${c.credit}</td>
-                        <td>${c.capacity}</td>
-                        <td><button class="btn-reject" onclick="deleteAdminCourse('${c.lecture_id}')" style="background-color:#d32f2f; color:white; border:none; padding:5px 10px; border-radius:4px; cursor:pointer;">삭제</button></td>
-                    `;
-                    tbody.appendChild(tr);
-                });
-            } catch (e) { console.error(e); }
-        }
-
-        async function createAdminCourse() {
-            const payload = {
-                subject: document.getElementById('course-subject').value,
-                college: document.getElementById('course-college').value,
-                department: document.getElementById('course-department').value,
-                course_type: document.getElementById('course-type').value,
-                room: document.getElementById('course-room').value,
-                credit: parseInt(document.getElementById('course-credit').value) || 3,
-                capacity: parseInt(document.getElementById('course-capacity').value) || 40,
-                professor_id: localStorage.getItem('user_no'),
-                times: []
-            };
-
-            if (!payload.subject) return alert("과목명은 필수입니다.");
-
-            const day1 = document.getElementById('course-day-1').value;
-            const time1 = document.getElementById('course-time-1').value;
-            if (day1 && time1 !== "") payload.times.push({ day: parseInt(day1), time: parseInt(time1) });
-
-            const day2 = document.getElementById('course-day-2').value;
-            const time2 = document.getElementById('course-time-2').value;
-            if (day2 && time2 !== "") payload.times.push({ day: parseInt(day2), time: parseInt(time2) });
-
-            try {
-                const res = await fetch('/api/v1/admin/courses', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
-                if (res.ok) {
-                    alert("강의가 성공적으로 개설되었습니다.");
-                    loadAdminCourses();
-                    document.querySelectorAll('#panel-courses input[type=text], #panel-courses input[type=number]').forEach(el => el.value = '');
-                    document.querySelectorAll('#panel-courses select').forEach(el => el.value = '');
-                } else {
-                    const error = await res.json();
-                    alert("개설 실패: " + error.detail);
-                }
-            } catch (e) { console.error(e); }
-        }
-
-        async function deleteAdminCourse(id) {
-            if (!confirm("해당 강의를 삭제하시겠습니까? (이 연산은 복구 불가능합니다)")) return;
-            try {
-                const res = await fetch(`/api/v1/admin/courses/${id}`, { method: 'DELETE' });
-                if (res.ok) {
-                    alert("삭제 완료되었습니다.");
-                    loadAdminCourses();
-                } else {
-                    alert("삭제 중 오류가 발생했습니다.");
-                }
-            } catch (e) { console.error(e); }
-        }
-
-        function logout() {
-            localStorage.clear();
-            location.href = '../auth/login.html';
-        }
-    </script>
+    loadAdminCourses();
+  </script>
 </body>
-
 </html>

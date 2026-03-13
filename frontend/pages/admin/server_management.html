@@ -1,699 +1,658 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>서버 관리 - 무강대학교</title>
-    <link rel="stylesheet" href="../../css/main.css">
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
-    <style>
-        .mgmt-card {
-            background: white;
-            border-radius: 8px;
-            padding: 24px;
-            margin-bottom: 20px;
-            border: 1px solid #e0e0e0;
-            box-shadow: 0 1px 4px rgba(0,0,0,0.08);
-        }
-        .mgmt-card h3 {
-            margin: 0 0 18px 0;
-            font-size: 1.05rem;
-            color: #1a237e;
-            border-bottom: 2px solid #e3f2fd;
-            padding-bottom: 10px;
-        }
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>서버 관리 - 무강대학교</title>
+  <link rel="stylesheet" href="/css/style.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700&family=Inria+Serif&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+  <style>
+    /* ─── from dashboard.css ─────────────────── */
+    .table-wrapper { position: relative; overflow-x: auto; max-height: 320px; overflow-y: auto; }
+    .table-wrapper::-webkit-scrollbar { width: 7px; height: 7px; }
+    .table-wrapper::-webkit-scrollbar-track { background: transparent; }
+    .table-wrapper::-webkit-scrollbar-thumb { background: var(--scrollbar); border-radius: 18px; }
+    .table-wrapper::-webkit-scrollbar-thumb:hover { background: #999; }
+    @media (max-width: 900px) { .sidebar { width: 180px; } .content { margin-left: 180px; padding: 16px; } }
+    @media (max-width: 640px) { .sidebar { display: none; } .content { margin-left: 0; } }
+    .nav-item { animation: fadeIn 0.3s ease both; }
+    .nav-item:nth-child(1) { animation-delay: 0.05s; }
+    .nav-item:nth-child(2) { animation-delay: 0.10s; }
+    .nav-item:nth-child(3) { animation-delay: 0.15s; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateX(-8px); } to { opacity: 1; transform: translateX(0); } }
 
-        /* 서버 시간 표시 */
-        .time-display {
-            background: #0d1b2a;
-            color: #00e5ff;
-            font-family: 'Courier New', monospace;
-            font-size: 1.8rem;
-            font-weight: bold;
-            padding: 18px 24px;
-            border-radius: 8px;
-            letter-spacing: 2px;
-            text-align: center;
-            margin-bottom: 10px;
-        }
-        .time-display .ms-part { font-size: 1.1rem; color: #80deea; margin-left: 4px; }
-        .time-unix {
-            text-align: center;
-            font-size: 0.82rem;
-            color: #888;
-            margin-bottom: 18px;
-            line-height: 1.6;
-        }
+    /* ─── 페이지 전용 스타일 ─────────────────── */
+    .mgmt-card {
+      background: white;
+      border-radius: 8px;
+      padding: 24px;
+      margin-bottom: 20px;
+      border: 1px solid #e0e0e0;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+    }
+    .mgmt-card h3 {
+      margin: 0 0 18px;
+      font-size: 1.05rem;
+      color: #152747;
+      border-bottom: 2px solid var(--blue-accent);
+      padding-bottom: 10px;
+    }
 
-        /* 오프셋 조정 */
-        .offset-row {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            margin-bottom: 10px;
-        }
-        .offset-row label { font-size: 0.9rem; color: #555; white-space: nowrap; }
-        .offset-input {
-            flex: 1;
-            padding: 10px 14px;
-            border: 1px solid #ddd;
-            border-radius: 6px;
-            font-size: 0.95rem;
-            font-family: 'Noto Sans KR', sans-serif;
-        }
-        .offset-input:focus { outline: none; border-color: #1976d2; }
-        .offset-desc {
-            font-size: 0.8rem;
-            color: #999;
-            margin-top: 6px;
-            line-height: 1.6;
-        }
-        .btn-primary {
-            padding: 10px 28px;
-            background: #1a237e;
-            color: white;
-            border: none;
-            border-radius: 6px;
-            font-size: 0.95rem;
-            font-weight: 600;
-            cursor: pointer;
-            font-family: 'Noto Sans KR', sans-serif;
-            transition: background .2s;
-            white-space: nowrap;
-        }
-        .btn-primary:hover { background: #283593; }
-        .btn-secondary {
-            padding: 10px 20px;
-            background: #f5f5f5;
-            color: #333;
-            border: 1px solid #ddd;
-            border-radius: 6px;
-            font-size: 0.9rem;
-            cursor: pointer;
-            font-family: 'Noto Sans KR', sans-serif;
-            transition: background .2s;
-            white-space: nowrap;
-        }
-        .btn-secondary:hover { background: #e0e0e0; }
+    /* 서버 시간 표시 */
+    .time-display {
+      background: #0d1b2a;
+      color: #00e5ff;
+      font-family: 'Courier New', monospace;
+      font-size: 1.8rem;
+      font-weight: bold;
+      padding: 18px 24px;
+      border-radius: 8px;
+      letter-spacing: 2px;
+      text-align: center;
+      margin-bottom: 10px;
+    }
+    .time-display .ms-part { font-size: 1.1rem; color: #80deea; margin-left: 4px; }
+    .time-unix {
+      text-align: center;
+      font-size: 0.82rem;
+      color: #888;
+      margin-bottom: 18px;
+      line-height: 1.6;
+    }
 
-        /* 프리셋 */
-        .preset-row {
-            display: flex;
-            gap: 8px;
-            flex-wrap: wrap;
-            margin-top: 10px;
-            align-items: center;
-        }
-        .preset-label { font-size: 0.8rem; color: #aaa; }
-        .btn-preset {
-            padding: 6px 14px;
-            border: 1px solid #90caf9;
-            border-radius: 20px;
-            background: #e3f2fd;
-            color: #1565c0;
-            font-size: 0.8rem;
-            cursor: pointer;
-            font-family: 'Noto Sans KR', sans-serif;
-            transition: background .15s;
-        }
-        .btn-preset:hover { background: #bbdefb; }
+    /* 오프셋 조정 */
+    .offset-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 10px;
+    }
+    .offset-row label { font-size: 0.9rem; color: #555; white-space: nowrap; }
+    .offset-input {
+      flex: 1;
+      padding: 10px 14px;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      font-size: 0.95rem;
+      font-family: 'Noto Sans KR', sans-serif;
+    }
+    .offset-input:focus { outline: none; border-color: #152747; }
+    .offset-desc {
+      font-size: 0.8rem;
+      color: #999;
+      margin-top: 6px;
+      line-height: 1.6;
+    }
 
-        /* 상태 뱃지 */
-        .badge {
-            display: inline-block;
-            padding: 4px 12px;
-            border-radius: 20px;
-            font-size: 0.78rem;
-            font-weight: 600;
-        }
-        .badge-ok       { background: #e8f5e9; color: #2e7d32; }
-        .badge-error    { background: #ffebee; color: #c62828; }
-        .badge-active   { background: #e3f2fd; color: #1565c0; }
-        .badge-inactive { background: #fff3e0; color: #e65100; }
-        .badge-basket   { background: #f3e5f5; color: #6a1b9a; }
+    .btn-primary {
+      padding: 10px 28px;
+      background: #152747;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+      font-family: 'Noto Sans KR', sans-serif;
+      transition: background .2s;
+      white-space: nowrap;
+    }
+    .btn-primary:hover { background: #1e3460; }
 
-        /* 모니터링 그리드 */
-        .monitor-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(155px, 1fr));
-            gap: 14px;
-            margin-bottom: 20px;
-        }
-        .monitor-stat {
-            background: #f8f9ff;
-            border: 1px solid #e8eaf6;
-            border-radius: 8px;
-            padding: 16px;
-            text-align: center;
-        }
-        .monitor-stat .stat-label {
-            font-size: 0.78rem;
-            color: #888;
-            margin-bottom: 8px;
-        }
-        .monitor-stat .stat-value {
-            font-size: 1.6rem;
-            font-weight: 700;
-            color: #1a237e;
-        }
-        .monitor-stat .stat-sub {
-            font-size: 0.75rem;
-            color: #aaa;
-            margin-top: 4px;
-        }
+    .btn-secondary {
+      padding: 10px 20px;
+      background: #f5f5f5;
+      color: #333;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      font-size: 0.9rem;
+      cursor: pointer;
+      font-family: 'Noto Sans KR', sans-serif;
+      transition: background .2s;
+      white-space: nowrap;
+    }
+    .btn-secondary:hover { background: #e0e0e0; }
 
-        /* 상태 행 */
-        .status-row {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 10px 0;
-            border-bottom: 1px solid #f0f0f0;
-        }
-        .status-row:last-child { border-bottom: none; }
-        .status-row .s-label { font-size: 0.88rem; color: #555; }
+    /* 프리셋 */
+    .preset-row {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-top: 10px;
+      align-items: center;
+    }
+    .preset-label { font-size: 0.8rem; color: #aaa; }
+    .btn-preset {
+      padding: 6px 14px;
+      border: 1px solid #b5c9e8;
+      border-radius: 20px;
+      background: var(--blue-bg);
+      color: #152747;
+      font-size: 0.8rem;
+      cursor: pointer;
+      font-family: 'Noto Sans KR', sans-serif;
+      transition: background .15s;
+    }
+    .btn-preset:hover { background: var(--blue-accent); }
 
-        /* 최근 신청 테이블 */
-        .mini-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
-        .mini-table th {
-            background: #f5f5f5;
-            padding: 8px 12px;
-            text-align: left;
-            font-weight: 600;
-            color: #444;
-            border-bottom: 1px solid #e0e0e0;
-        }
-        .mini-table td {
-            padding: 8px 12px;
-            border-bottom: 1px solid #f0f0f0;
-            color: #555;
-        }
-        .mini-table tr:last-child td { border-bottom: none; }
+    /* 상태 뱃지 */
+    .badge {
+      display: inline-block;
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 0.78rem;
+      font-weight: 600;
+    }
+    .badge-ok       { background: #e8f5e9; color: #2e7d32; }
+    .badge-error    { background: #ffebee; color: #c62828; }
+    .badge-active   { background: var(--blue-accent); color: #152747; }
+    .badge-inactive { background: #fff3e0; color: #e65100; }
+    .badge-basket   { background: #f3e5f5; color: #6a1b9a; }
 
-        /* 자동 갱신 바 */
-        .refresh-bar {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            margin-bottom: 16px;
-        }
-        .pulse {
-            display: inline-block;
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-            background: #43a047;
-            margin-right: 6px;
-            animation: pulse-anim 1.5s infinite;
-        }
-        @keyframes pulse-anim {
-            0%   { box-shadow: 0 0 0 0 rgba(67,160,71,.6); }
-            70%  { box-shadow: 0 0 0 8px rgba(67,160,71,0); }
-            100% { box-shadow: 0 0 0 0 rgba(67,160,71,0); }
-        }
+    /* 모니터링 그리드 */
+    .monitor-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(155px, 1fr));
+      gap: 14px;
+      margin-bottom: 20px;
+    }
+    .monitor-stat {
+      background: var(--blue-bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 16px;
+      text-align: center;
+    }
+    .monitor-stat .stat-label { font-size: 0.78rem; color: #888; margin-bottom: 8px; }
+    .monitor-stat .stat-value { font-size: 1.6rem; font-weight: 700; color: #152747; }
+    .monitor-stat .stat-sub   { font-size: 0.75rem; color: #aaa; margin-top: 4px; }
 
-        /* 토스트 */
-        .toast {
-            position: fixed;
-            bottom: 28px;
-            right: 28px;
-            padding: 12px 22px;
-            border-radius: 8px;
-            font-size: 0.9rem;
-            font-weight: 500;
-            color: white;
-            box-shadow: 0 4px 16px rgba(0,0,0,0.18);
-            z-index: 9999;
-            opacity: 0;
-            transform: translateY(10px);
-            transition: opacity .3s, transform .3s;
-            pointer-events: none;
-        }
-        .toast.show { opacity: 1; transform: translateY(0); }
-        .toast-success { background: #388e3c; }
-        .toast-error   { background: #c62828; }
+    /* 상태 행 */
+    .status-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 0;
+      border-bottom: 1px solid #f0f0f0;
+    }
+    .status-row:last-child { border-bottom: none; }
+    .status-row .s-label { font-size: 0.88rem; color: #555; }
 
-        /* 안내 박스 */
-        .info-box {
-            min-width: 210px;
-            background: #f8f9ff;
-            border: 1px solid #e8eaf6;
-            border-radius: 8px;
-            padding: 14px;
-            font-size: 0.83rem;
-            color: #555;
-            line-height: 1.8;
-        }
-        .info-box strong { color: #1a237e; }
-        .inline-code {
-            background: #e8eaf6;
-            padding: 3px 8px;
-            border-radius: 4px;
-            font-size: 0.82rem;
-            color: #1a237e;
-            font-family: 'Courier New', monospace;
-        }
-    </style>
+    /* 최근 신청 테이블 */
+    .mini-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+    .mini-table th {
+      background: var(--blue-bg);
+      padding: 8px 12px;
+      text-align: left;
+      font-weight: 600;
+      color: #152747;
+      border-bottom: 1px solid var(--border);
+    }
+    .mini-table td {
+      padding: 8px 12px;
+      border-bottom: 1px solid #f0f0f0;
+      color: #555;
+    }
+    .mini-table tr:last-child td { border-bottom: none; }
+
+    /* 자동 갱신 바 */
+    .refresh-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 16px;
+    }
+    .pulse {
+      display: inline-block;
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: #43a047;
+      margin-right: 6px;
+      animation: pulse-anim 1.5s infinite;
+    }
+    @keyframes pulse-anim {
+      0%   { box-shadow: 0 0 0 0 rgba(67,160,71,.6); }
+      70%  { box-shadow: 0 0 0 8px rgba(67,160,71,0); }
+      100% { box-shadow: 0 0 0 0 rgba(67,160,71,0); }
+    }
+
+    /* 안내 박스 */
+    .info-box {
+      min-width: 210px;
+      background: var(--blue-bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 14px;
+      font-size: 0.83rem;
+      color: #555;
+      line-height: 1.8;
+    }
+    .info-box strong { color: #152747; }
+    .inline-code {
+      background: var(--blue-accent);
+      padding: 3px 8px;
+      border-radius: 4px;
+      font-size: 0.82rem;
+      color: #152747;
+      font-family: 'Courier New', monospace;
+    }
+
+    /* 서버관리 전용 토스트 (dashboard.css .toast 위치와 충돌 방지) */
+    .srv-toast {
+      position: fixed;
+      bottom: 28px;
+      right: 28px;
+      padding: 12px 22px;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      font-weight: 500;
+      color: white;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.18);
+      z-index: 9999;
+      opacity: 0;
+      transform: translateY(10px);
+      transition: opacity .3s, transform .3s;
+      pointer-events: none;
+    }
+    .srv-toast.show    { opacity: 1; transform: translateY(0); }
+    .toast-success { background: #388e3c; }
+    .toast-error   { background: #c62828; }
+  </style>
 </head>
 <body>
-<div class="app-container">
+  <!-- Header -->
+  <header class="header">
+    <div class="logo-area">
+      <img src="/image/logo.png" alt="무강대학교 로고" class="logo-img" />
+    </div>
+  </header>
 
-    <!-- ===== Sidebar ===== -->
+  <div class="main-layout">
+    <!-- Sidebar -->
     <aside class="sidebar">
-        <div class="sidebar-header" style="background-color: #37474f;">
-            <div class="student-info">
-                <span class="name" id="staff-name"></span>
-                <span class="id"   id="staff-id"></span>
-            </div>
-            <div class="department-info">
-                <p id="staff-college"></p>
-                <p class="sub-dept" id="staff-depart"></p>
-            </div>
+      <div class="sidebar-profile">
+        <div class="profile-top">
+          <span class="profile-name" id="staff-name">정보전산관리부</span>
         </div>
-        <nav class="sidebar-nav">
-            <button class="nav-item" onclick="location.href='enrollment_schedule.html'">수강신청 기간 설정</button>
-            <button class="nav-item" onclick="location.href='course_management.html'">개설 관리</button>
-            <button class="nav-item" onclick="location.href='rag_update.html'">AI 학사 규정</button>
-            <button class="nav-item active" onclick="location.href='server_management.html'">서버 관리</button>
-            <button class="nav-item logout-btn" onclick="logout()">로그아웃</button>
-        </nav>
+        <div class="profile-divider"></div>
+        <div class="profile-dept" id="staff-dept">임정현<br />아동가족복지학과 담당</div>
+      </div>
+      <nav class="sidebar-nav">
+        <a href="/pages/admin/enrollment_schedule.html" class="nav-item">수강신청 스케줄</a>
+        <a href="/pages/admin/course_management.html" class="nav-item">개설 관리</a>
+        <a href="/pages/admin/server_management.html" class="nav-item active">서버 관리</a>
+        <a href="/index.html" class="nav-item logout">로그아웃</a>
+      </nav>
     </aside>
 
-    <!-- ===== Main ===== -->
-    <main class="main-content">
-        <header class="top-header">
-            <div class="logo-area">
-                <h1>무강대학교 - 관리자 센터</h1>
-                <span class="logo-sub">서버 시간 동기화 · 시스템 모니터링</span>
+    <!-- Main Content -->
+    <main class="content">
+
+      <!-- 섹션 1: 서버 시간 동기화 -->
+      <div class="mgmt-card">
+        <h3>🕐 서버 시간 동기화</h3>
+
+        <div class="time-display" id="live-time">
+          --:--:--<span class="ms-part">.---</span>
+        </div>
+        <div class="time-unix" id="live-unix">
+          Unix 타임스탬프(ms): --<br>KST: --
+        </div>
+
+        <div style="display:flex; gap:16px; align-items:flex-start; flex-wrap:wrap;">
+          <div style="flex:1; min-width:260px;">
+            <div class="offset-row">
+              <label>시간 오프셋 (ms)</label>
+              <input type="number" id="offset-input" class="offset-input"
+                     placeholder="0" step="1" value="0">
+              <button class="btn-primary"   onclick="saveOffset()">저장</button>
+              <button class="btn-secondary" onclick="resetOffset()">초기화</button>
             </div>
-        </header>
-
-        <div class="content-area">
-
-            <!-- ===== 섹션 1: 서버 시간 동기화 ===== -->
-            <div class="mgmt-card">
-                <h3>🕐 서버 시간 동기화</h3>
-
-                <!-- 실시간 시계 -->
-                <div class="time-display" id="live-time">
-                    --:--:--<span class="ms-part">.---</span>
-                </div>
-                <div class="time-unix" id="live-unix">
-                    Unix 타임스탬프(ms): --<br>KST: --
-                </div>
-
-                <!-- 오프셋 설정 + 안내 -->
-                <div style="display:flex; gap:16px; align-items:flex-start; flex-wrap:wrap;">
-                    <div style="flex:1; min-width:260px;">
-                        <div class="offset-row">
-                            <label>시간 오프셋 (ms)</label>
-                            <input type="number" id="offset-input" class="offset-input"
-                                   placeholder="0" step="1" value="0">
-                            <button class="btn-primary"   onclick="saveOffset()">저장</button>
-                            <button class="btn-secondary" onclick="resetOffset()">초기화</button>
-                        </div>
-                        <div class="offset-desc">
-                            양수: 서버 시간을 앞당김 &nbsp;|&nbsp; 음수: 서버 시간을 늦춤<br>
-                            예) +500 → 서버 시간이 실제보다 500 ms 빠르게 외부에 노출됩니다.
-                        </div>
-                        <div class="preset-row">
-                            <span class="preset-label">빠른 설정:</span>
-                            <button class="btn-preset" onclick="applyPreset(0)">±0 ms</button>
-                            <button class="btn-preset" onclick="applyPreset(100)">+100 ms</button>
-                            <button class="btn-preset" onclick="applyPreset(500)">+500 ms</button>
-                            <button class="btn-preset" onclick="applyPreset(-100)">−100 ms</button>
-                            <button class="btn-preset" onclick="applyPreset(-500)">−500 ms</button>
-                        </div>
-                    </div>
-
-                    <div class="info-box">
-                        <strong>네이비즘(navism) 연동 안내</strong><br>
-                        외부 서버 시간 확인 사이트들은<br>아래 엔드포인트를 참조합니다.<br><br>
-                        <span class="inline-code">GET /api/time</span><br><br>
-                        오프셋을 조정하면 해당 API가<br>반환하는 시간이 변경됩니다.
-                    </div>
-                </div>
-
-                <!-- 현재 오프셋 상태 표시 -->
-                <div style="margin-top:14px; padding:10px 14px; background:#f5f5f5; border-radius:6px; font-size:0.82rem; color:#888;">
-                    현재 적용 오프셋:
-                    <strong id="current-offset-display" style="color:#1a237e;">0 ms</strong>
-                    &nbsp;|&nbsp;
-                    서버 시간 API 주소: <span class="inline-code">/api/time</span>
-                    &nbsp;|&nbsp;
-                    <span id="offset-applied-time">-</span>
-                </div>
+            <div class="offset-desc">
+              양수: 서버 시간을 앞당김 &nbsp;|&nbsp; 음수: 서버 시간을 늦춤<br>
+              예) +500 → 서버 시간이 실제보다 500 ms 빠르게 외부에 노출됩니다.
             </div>
-
-            <!-- ===== 섹션 2: 시스템 실시간 모니터링 ===== -->
-            <div class="mgmt-card">
-                <h3>📊 시스템 실시간 모니터링</h3>
-
-                <!-- 갱신 바 -->
-                <div class="refresh-bar">
-                    <div>
-                        <span class="pulse"></span>
-                        <span style="font-size:0.85rem; color:#43a047; font-weight:600;">실시간 모니터링 중</span>
-                    </div>
-                    <div style="display:flex; align-items:center; gap:10px;">
-                        <span style="font-size:0.8rem; color:#999;" id="last-updated">마지막 갱신: -</span>
-                        <button class="btn-secondary" onclick="loadSystemStatus()"
-                                style="padding:6px 14px; font-size:0.82rem;">수동 갱신</button>
-                    </div>
-                </div>
-
-                <!-- 주요 지표 카드 -->
-                <div class="monitor-grid">
-                    <div class="monitor-stat">
-                        <div class="stat-label">수강신청 완료</div>
-                        <div class="stat-value" id="stat-completed">-</div>
-                        <div class="stat-sub">건</div>
-                    </div>
-                    <div class="monitor-stat">
-                        <div class="stat-label">장바구니</div>
-                        <div class="stat-value" id="stat-basket">-</div>
-                        <div class="stat-sub">건</div>
-                    </div>
-                    <div class="monitor-stat">
-                        <div class="stat-label">취소</div>
-                        <div class="stat-value" id="stat-canceled">-</div>
-                        <div class="stat-sub">건</div>
-                    </div>
-                    <div class="monitor-stat">
-                        <div class="stat-label">대기열 대기 중</div>
-                        <div class="stat-value" id="stat-waitlist">-</div>
-                        <div class="stat-sub">건</div>
-                    </div>
-                    <div class="monitor-stat">
-                        <div class="stat-label">등록 학생 수</div>
-                        <div class="stat-value" id="stat-students">-</div>
-                        <div class="stat-sub">명</div>
-                    </div>
-                    <div class="monitor-stat">
-                        <div class="stat-label">전체 강좌 수</div>
-                        <div class="stat-value" id="stat-lectures">-</div>
-                        <div class="stat-sub">개</div>
-                    </div>
-                </div>
-
-                <!-- 시스템 상태 행 -->
-                <div style="margin-bottom:20px;">
-                    <div class="status-row">
-                        <span class="s-label">DB 연결 상태</span>
-                        <span id="stat-db-status"><span class="badge badge-ok">-</span></span>
-                    </div>
-                    <div class="status-row">
-                        <span class="s-label">DB 응답 지연</span>
-                        <span id="stat-db-latency" style="font-size:0.9rem; color:#555;">- ms</span>
-                    </div>
-                    <div class="status-row">
-                        <span class="s-label">수강신청 현재 상태</span>
-                        <span id="stat-enrollment-active"><span class="badge badge-inactive">-</span></span>
-                    </div>
-                    <div class="status-row">
-                        <span class="s-label">현재 활성 일차 / 마감</span>
-                        <span id="stat-active-day" style="font-size:0.88rem; color:#555;">-</span>
-                    </div>
-                    <div class="status-row">
-                        <span class="s-label">대기열 승격 완료</span>
-                        <span id="stat-waitlist-promoted" style="font-size:0.9rem; color:#555;">-</span>
-                    </div>
-                </div>
-
-                <!-- 최근 수강신청 5건 -->
-                <div>
-                    <div style="font-size:0.88rem; font-weight:600; color:#444; margin-bottom:10px;">
-                        최근 수강신청 내역 (최근 5건)
-                    </div>
-                    <div class="table-wrapper" style="max-height:240px; overflow-y:auto;">
-                        <table class="mini-table">
-                            <thead>
-                                <tr>
-                                    <th>신청번호</th>
-                                    <th>학번(user_id)</th>
-                                    <th>강의 ID</th>
-                                    <th>상태</th>
-                                    <th>신청 시각 (KST)</th>
-                                </tr>
-                            </thead>
-                            <tbody id="recent-tbody">
-                                <tr><td colspan="5" style="text-align:center; color:#aaa; padding:20px;">로딩 중...</td></tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
+            <div class="preset-row">
+              <span class="preset-label">빠른 설정:</span>
+              <button class="btn-preset" onclick="applyPreset(0)">±0 ms</button>
+              <button class="btn-preset" onclick="applyPreset(100)">+100 ms</button>
+              <button class="btn-preset" onclick="applyPreset(500)">+500 ms</button>
+              <button class="btn-preset" onclick="applyPreset(-100)">−100 ms</button>
+              <button class="btn-preset" onclick="applyPreset(-500)">−500 ms</button>
             </div>
+          </div>
 
-        </div><!-- /content-area -->
+          <div class="info-box">
+            <strong>네이비즘(navism) 연동 안내</strong><br>
+            외부 서버 시간 확인 사이트들은<br>아래 엔드포인트를 참조합니다.<br><br>
+            <span class="inline-code">GET /api/time</span><br><br>
+            오프셋을 조정하면 해당 API가<br>반환하는 시간이 변경됩니다.
+          </div>
+        </div>
+
+        <div style="margin-top:14px; padding:10px 14px; background:var(--blue-bg); border-radius:6px; font-size:0.82rem; color:#888;">
+          현재 적용 오프셋:
+          <strong id="current-offset-display" style="color:#152747;">0 ms</strong>
+          &nbsp;|&nbsp;
+          서버 시간 API 주소: <span class="inline-code">/api/time</span>
+          &nbsp;|&nbsp;
+          <span id="offset-applied-time">-</span>
+        </div>
+      </div>
+
+      <!-- 섹션 2: 시스템 실시간 모니터링 -->
+      <div class="mgmt-card">
+        <h3>📊 시스템 실시간 모니터링</h3>
+
+        <div class="refresh-bar">
+          <div>
+            <span class="pulse"></span>
+            <span style="font-size:0.85rem; color:#43a047; font-weight:600;">실시간 모니터링 중</span>
+          </div>
+          <div style="display:flex; align-items:center; gap:10px;">
+            <span style="font-size:0.8rem; color:#999;" id="last-updated">마지막 갱신: -</span>
+            <button class="btn-secondary" onclick="loadSystemStatus()"
+                    style="padding:6px 14px; font-size:0.82rem;">수동 갱신</button>
+          </div>
+        </div>
+
+        <!-- 주요 지표 -->
+        <div class="monitor-grid">
+          <div class="monitor-stat">
+            <div class="stat-label">수강신청 완료</div>
+            <div class="stat-value" id="stat-completed">-</div>
+            <div class="stat-sub">건</div>
+          </div>
+          <div class="monitor-stat">
+            <div class="stat-label">장바구니</div>
+            <div class="stat-value" id="stat-basket">-</div>
+            <div class="stat-sub">건</div>
+          </div>
+          <div class="monitor-stat">
+            <div class="stat-label">취소</div>
+            <div class="stat-value" id="stat-canceled">-</div>
+            <div class="stat-sub">건</div>
+          </div>
+          <div class="monitor-stat">
+            <div class="stat-label">대기열 대기 중</div>
+            <div class="stat-value" id="stat-waitlist">-</div>
+            <div class="stat-sub">건</div>
+          </div>
+          <div class="monitor-stat">
+            <div class="stat-label">등록 학생 수</div>
+            <div class="stat-value" id="stat-students">-</div>
+            <div class="stat-sub">명</div>
+          </div>
+          <div class="monitor-stat">
+            <div class="stat-label">전체 강좌 수</div>
+            <div class="stat-value" id="stat-lectures">-</div>
+            <div class="stat-sub">개</div>
+          </div>
+        </div>
+
+        <!-- 시스템 상태 행 -->
+        <div style="margin-bottom:20px;">
+          <div class="status-row">
+            <span class="s-label">DB 연결 상태</span>
+            <span id="stat-db-status"><span class="badge badge-ok">-</span></span>
+          </div>
+          <div class="status-row">
+            <span class="s-label">DB 응답 지연</span>
+            <span id="stat-db-latency" style="font-size:0.9rem; color:#555;">- ms</span>
+          </div>
+          <div class="status-row">
+            <span class="s-label">수강신청 현재 상태</span>
+            <span id="stat-enrollment-active"><span class="badge badge-inactive">-</span></span>
+          </div>
+          <div class="status-row">
+            <span class="s-label">현재 활성 일차 / 마감</span>
+            <span id="stat-active-day" style="font-size:0.88rem; color:#555;">-</span>
+          </div>
+          <div class="status-row">
+            <span class="s-label">대기열 승격 완료</span>
+            <span id="stat-waitlist-promoted" style="font-size:0.9rem; color:#555;">-</span>
+          </div>
+        </div>
+
+        <!-- 최근 신청 5건 -->
+        <div>
+          <div style="font-size:0.88rem; font-weight:600; color:#152747; margin-bottom:10px;">
+            최근 수강신청 내역 (최근 5건)
+          </div>
+          <div class="table-wrapper" style="max-height:240px;">
+            <table class="mini-table">
+              <thead>
+                <tr>
+                  <th>신청번호</th>
+                  <th>학번(user_id)</th>
+                  <th>강의 ID</th>
+                  <th>상태</th>
+                  <th>신청 시각 (KST)</th>
+                </tr>
+              </thead>
+              <tbody id="recent-tbody">
+                <tr><td colspan="5" style="text-align:center; color:#aaa; padding:20px;">로딩 중...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
     </main>
-</div>
+  </div>
 
-<!-- 토스트 알림 -->
-<div id="toast" class="toast"></div>
+  <!-- 서버관리 전용 토스트 -->
+  <div id="srv-toast" class="srv-toast"></div>
 
-<script>
-const API_BASE = '';
-const role   = localStorage.getItem('role');
-const userId = localStorage.getItem('user_no');
-const token  = localStorage.getItem('access_token');
+  <script>
+    const API_BASE = '';
+    const token    = localStorage.getItem('access_token');
+    const userId   = localStorage.getItem('user_no');
 
-// ---- 사이드바 프로필 로드 ----
-(async () => {
-    try {
+    // 사이드바 프로필 로드
+    (async () => {
+      if (!userId) return;
+      try {
         const res = await fetch(`/api/v1/users/${userId}`);
         if (res.ok) {
-            const p = await res.json();
-            document.getElementById('staff-name').textContent    = p.name       || '';
-            document.getElementById('staff-id').textContent      = p.student_id || '';
-            document.getElementById('staff-college').textContent = p.college    || '';
-            document.getElementById('staff-depart').textContent  = p.depart     || '';
+          const p = await res.json();
+          const nameEl = document.getElementById('staff-name');
+          const deptEl = document.getElementById('staff-dept');
+          if (nameEl) nameEl.textContent = p.name || '정보전산관리부';
+          if (deptEl) deptEl.innerHTML   = `${p.college || ''}<br />${p.depart || ''} 담당`;
         }
-    } catch (e) { console.error('프로필 로드 오류:', e); }
-})();
+      } catch (e) { console.error('프로필 로드 오류:', e); }
+    })();
 
-function switchNav(href, tabId) {
-    document.querySelectorAll('.sidebar-nav .nav-item').forEach(b => b.classList.remove('active'));
-    document.getElementById(tabId).classList.add('active');
-    location.href = href;
-}
-function logout() {
-    localStorage.clear();
-    location.href = '../auth/login.html';
-}
+    // 토스트
+    function showToast(msg, type = 'success') {
+      const el = document.getElementById('srv-toast');
+      el.textContent = msg;
+      el.className = `srv-toast toast-${type} show`;
+      setTimeout(() => el.classList.remove('show'), 2800);
+    }
 
-// ---- 토스트 ----
-function showToast(msg, type = 'success') {
-    const el = document.getElementById('toast');
-    el.textContent = msg;
-    el.className = `toast toast-${type} show`;
-    setTimeout(() => el.classList.remove('show'), 2800);
-}
+    // ================================================================
+    // 섹션 1: 서버 시간 동기화
+    // ================================================================
+    let clientDriftMs = 0;
 
-// ================================================================
-// 섹션 1: 서버 시간 동기화
-// ================================================================
-let clientDriftMs = 0; // 서버 기준으로 계산한 클라이언트 보정값(ms)
-
-async function syncServerTime() {
-    try {
+    async function syncServerTime() {
+      try {
         const before = Date.now();
         const res = await fetch('/api/time');
         const after = Date.now();
         if (!res.ok) {
-            console.warn('서버 시간 API 응답 실패:', res.status);
-            document.getElementById('offset-applied-time').textContent = '서버 시간 동기화 실패 (로컬 시간 사용 중)';
-            return;
+          document.getElementById('offset-applied-time').textContent = '서버 시간 동기화 실패 (로컬 시간 사용 중)';
+          return;
         }
         const data = await res.json();
-
-        // 네트워크 왕복 절반만큼 보정
         const halfRtt = Math.round((after - before) / 2);
         clientDriftMs = (data.timestamp_ms + halfRtt) - Date.now();
 
         const offsetMs = data.offset_ms || 0;
         document.getElementById('offset-input').value = offsetMs;
         document.getElementById('current-offset-display').textContent =
-            `${offsetMs >= 0 ? '+' : ''}${offsetMs} ms`;
+          `${offsetMs >= 0 ? '+' : ''}${offsetMs} ms`;
 
         const serverTimeStr = new Date(data.timestamp_ms)
-            .toLocaleString('ko-KR', { timeZone: 'Asia/Seoul', hour12: false });
+          .toLocaleString('ko-KR', { timeZone: 'Asia/Seoul', hour12: false });
         document.getElementById('offset-applied-time').textContent =
-            `서버 기준 현재: ${serverTimeStr}`;
-    } catch (e) {
+          `서버 기준 현재: ${serverTimeStr}`;
+      } catch (e) {
         console.error('서버 시간 동기화 실패:', e);
         document.getElementById('offset-applied-time').textContent = '서버 시간 동기화 실패 (로컬 시간 사용 중)';
-        // 실패해도 시계는 로컬 시간으로 계속 동작 (clientDriftMs = 0 유지)
+      }
     }
-}
 
-function tickClock() {
-    const now = new Date(Date.now() + clientDriftMs);
-    const hh  = String(now.getUTCHours()).padStart(2, '0');
-    const mm  = String(now.getUTCMinutes()).padStart(2, '0');
-    const ss  = String(now.getUTCSeconds()).padStart(2, '0');
-    const ms  = String(now.getUTCMilliseconds()).padStart(3, '0');
-
-    document.getElementById('live-time').innerHTML =
+    function tickClock() {
+      const now = new Date(Date.now() + clientDriftMs);
+      const hh  = String(now.getUTCHours()).padStart(2, '0');
+      const mm  = String(now.getUTCMinutes()).padStart(2, '0');
+      const ss  = String(now.getUTCSeconds()).padStart(2, '0');
+      const ms  = String(now.getUTCMilliseconds()).padStart(3, '0');
+      document.getElementById('live-time').innerHTML =
         `${hh}:${mm}:${ss}<span class="ms-part">.${ms}</span>`;
-
-    const kst = now.toLocaleString('ko-KR', { timeZone: 'Asia/Seoul', hour12: false });
-    document.getElementById('live-unix').innerHTML =
+      const kst = now.toLocaleString('ko-KR', { timeZone: 'Asia/Seoul', hour12: false });
+      document.getElementById('live-unix').innerHTML =
         `Unix 타임스탬프(ms): <strong>${now.getTime()}</strong><br>KST: ${kst}`;
-}
+    }
 
-async function saveOffset() {
-    const val = parseInt(document.getElementById('offset-input').value, 10);
-    if (isNaN(val)) { showToast('올바른 숫자를 입력해주세요.', 'error'); return; }
-    try {
+    async function saveOffset() {
+      const val = parseInt(document.getElementById('offset-input').value, 10);
+      if (isNaN(val)) { showToast('올바른 숫자를 입력해주세요.', 'error'); return; }
+      try {
         const res = await fetch(`${API_BASE}/api/v1/admin/server-time-offset`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
-            },
-            body: JSON.stringify({ offset_ms: val })
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({ offset_ms: val })
         });
         if (!res.ok) {
-            const err = await res.json().catch(() => ({}));
-            showToast('저장 실패: ' + (err.detail || res.status), 'error');
-            return;
+          const err = await res.json().catch(() => ({}));
+          showToast('저장 실패: ' + (err.detail || res.status), 'error');
+          return;
         }
         showToast(`오프셋 ${val >= 0 ? '+' : ''}${val} ms 저장 완료`);
         await syncServerTime();
-    } catch (e) {
+      } catch (e) {
         showToast('서버 통신 오류', 'error');
+      }
     }
-}
 
-function resetOffset() {
-    document.getElementById('offset-input').value = 0;
-    saveOffset();
-}
+    function resetOffset() {
+      document.getElementById('offset-input').value = 0;
+      saveOffset();
+    }
 
-function applyPreset(val) {
-    document.getElementById('offset-input').value = val;
-    saveOffset();
-}
+    function applyPreset(val) {
+      document.getElementById('offset-input').value = val;
+      saveOffset();
+    }
 
-// ================================================================
-// 섹션 2: 시스템 모니터링
-// ================================================================
-const STATUS_LABELS = {
-    COMPLETED : '완료',
-    BASKET    : '장바구니',
-    CANCELED  : '취소'
-};
-const RESTRICTION_LABELS = {
-    own_grade_dept : '본인학년·학과',
-    own_college    : '본인단과대',
-    all            : '전체'
-};
+    // ================================================================
+    // 섹션 2: 시스템 모니터링
+    // ================================================================
+    const STATUS_LABELS = { COMPLETED: '완료', BASKET: '장바구니', CANCELED: '취소' };
+    const RESTRICTION_LABELS = {
+      own_grade_dept: '본인학년·학과',
+      own_college:    '본인단과대',
+      all:            '전체'
+    };
 
-async function loadSystemStatus() {
-    try {
+    async function loadSystemStatus() {
+      try {
         const res = await fetch(`${API_BASE}/api/v1/admin/system-status`, {
-            headers: { 'Authorization': `Bearer ${token}` }
+          headers: { 'Authorization': `Bearer ${token}` }
         });
         if (!res.ok) {
-            const err = await res.json().catch(() => ({}));
-            showToast(`모니터링 조회 실패 (${res.status}): ${err.detail || ''}`, 'error');
-            document.getElementById('stat-db-status').innerHTML =
-                `<span class="badge badge-error">HTTP ${res.status}</span>`;
-            return;
+          const err = await res.json().catch(() => ({}));
+          showToast(`모니터링 조회 실패 (${res.status}): ${err.detail || ''}`, 'error');
+          document.getElementById('stat-db-status').innerHTML =
+            `<span class="badge badge-error">HTTP ${res.status}</span>`;
+          return;
         }
         const d = await res.json();
 
-        // DB 오류 상태 우선 처리
         const dbOk = d.db_status === '정상';
         document.getElementById('stat-db-status').innerHTML =
-            `<span class="badge ${dbOk ? 'badge-ok' : 'badge-error'}">${d.db_status}</span>`;
+          `<span class="badge ${dbOk ? 'badge-ok' : 'badge-error'}">${d.db_status}</span>`;
         document.getElementById('stat-db-latency').textContent =
-            d.db_latency_ms >= 0 ? `${d.db_latency_ms} ms` : '측정 불가';
+          d.db_latency_ms >= 0 ? `${d.db_latency_ms} ms` : '측정 불가';
 
-        if (!dbOk) {
-            showToast(`DB 상태 오류: ${d.error_detail || '알 수 없음'}`, 'error');
-        }
+        if (!dbOk) showToast(`DB 상태 오류: ${d.error_detail || '알 수 없음'}`, 'error');
 
-        // 주요 지표 (안전하게 옵셔널 체이닝)
-        document.getElementById('stat-completed').textContent =
-            (d.enrollments?.completed ?? '-').toLocaleString?.() ?? (d.enrollments?.completed ?? '-');
-        document.getElementById('stat-basket').textContent =
-            (d.enrollments?.basket ?? '-').toLocaleString?.() ?? (d.enrollments?.basket ?? '-');
-        document.getElementById('stat-canceled').textContent =
-            (d.enrollments?.canceled ?? '-').toLocaleString?.() ?? (d.enrollments?.canceled ?? '-');
-        document.getElementById('stat-waitlist').textContent =
-            (d.waitlist?.waiting ?? '-').toLocaleString?.() ?? (d.waitlist?.waiting ?? '-');
-        document.getElementById('stat-students').textContent =
-            (d.total_students ?? '-').toLocaleString?.() ?? (d.total_students ?? '-');
-        document.getElementById('stat-lectures').textContent =
-            (d.total_lectures ?? '-').toLocaleString?.() ?? (d.total_lectures ?? '-');
+        const fmt = v => typeof v?.toLocaleString === 'function' ? v.toLocaleString() : (v ?? '-');
+        document.getElementById('stat-completed').textContent = fmt(d.enrollments?.completed);
+        document.getElementById('stat-basket').textContent    = fmt(d.enrollments?.basket);
+        document.getElementById('stat-canceled').textContent  = fmt(d.enrollments?.canceled);
+        document.getElementById('stat-waitlist').textContent  = fmt(d.waitlist?.waiting);
+        document.getElementById('stat-students').textContent  = fmt(d.total_students);
+        document.getElementById('stat-lectures').textContent  = fmt(d.total_lectures);
 
-        // 수강신청 활성 상태
         document.getElementById('stat-enrollment-active').innerHTML =
-            `<span class="badge ${d.enrollment_active ? 'badge-active' : 'badge-inactive'}">
-                ${d.enrollment_active ? '진행 중' : '비활성'}
-            </span>`;
+          `<span class="badge ${d.enrollment_active ? 'badge-active' : 'badge-inactive'}">
+            ${d.enrollment_active ? '진행 중' : '비활성'}
+          </span>`;
 
-        // 활성 일차 정보
         if (d.active_day) {
-            const closeDt = d.active_day.close_datetime;
-            const closeKST = closeDt
-                ? new Date(closeDt).toLocaleString('ko-KR', { timeZone: 'Asia/Seoul', hour12: false })
-                : '-';
-            const restrict = RESTRICTION_LABELS[d.active_day.restriction_type] || d.active_day.restriction_type;
-            document.getElementById('stat-active-day').textContent =
-                `${d.active_day.day_number}일차 (${restrict}) — 마감: ${closeKST}`;
+          const closeKST = d.active_day.close_datetime
+            ? new Date(d.active_day.close_datetime)
+                .toLocaleString('ko-KR', { timeZone: 'Asia/Seoul', hour12: false })
+            : '-';
+          const restrict = RESTRICTION_LABELS[d.active_day.restriction_type] || d.active_day.restriction_type;
+          document.getElementById('stat-active-day').textContent =
+            `${d.active_day.day_number}일차 (${restrict}) — 마감: ${closeKST}`;
         } else {
-            document.getElementById('stat-active-day').textContent = '-';
+          document.getElementById('stat-active-day').textContent = '-';
         }
 
         document.getElementById('stat-waitlist-promoted').textContent =
-            `${(d.waitlist?.promoted ?? 0).toLocaleString()} 건`;
+          `${(d.waitlist?.promoted ?? 0).toLocaleString()} 건`;
 
-        // 최근 신청 5건 테이블
         const tbody = document.getElementById('recent-tbody');
-        if (!d.recent_enrollments || !d.recent_enrollments.length) {
-            tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:#aaa; padding:16px;">데이터 없음</td></tr>';
+        if (!d.recent_enrollments?.length) {
+          tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:#aaa; padding:16px;">데이터 없음</td></tr>';
         } else {
-            tbody.innerHTML = d.recent_enrollments.map(e => {
-                const timeStr = e.created_at
-                    ? new Date(e.created_at).toLocaleString('ko-KR', { timeZone: 'Asia/Seoul', hour12: false })
-                    : '-';
-                const label = STATUS_LABELS[e.status] || e.status || '-';
-                const cls   = e.status === 'COMPLETED' ? 'badge-active'
-                            : e.status === 'CANCELED'  ? 'badge-error'
-                            : 'badge-basket';
-                return `<tr>
-                    <td>${e.enroll_no ?? '-'}</td>
-                    <td>${e.user_id ?? '-'}</td>
-                    <td>${e.lecture_id ?? '-'}</td>
-                    <td><span class="badge ${cls}">${label}</span></td>
-                    <td>${timeStr}</td>
-                </tr>`;
-            }).join('');
+          tbody.innerHTML = d.recent_enrollments.map(e => {
+            const timeStr = e.created_at
+              ? new Date(e.created_at).toLocaleString('ko-KR', { timeZone: 'Asia/Seoul', hour12: false })
+              : '-';
+            const label = STATUS_LABELS[e.status] || e.status || '-';
+            const cls   = e.status === 'COMPLETED' ? 'badge-active'
+                        : e.status === 'CANCELED'  ? 'badge-error'
+                        : 'badge-basket';
+            return `<tr>
+              <td>${e.enroll_no ?? '-'}</td>
+              <td>${e.user_id ?? '-'}</td>
+              <td>${e.lecture_id ?? '-'}</td>
+              <td><span class="badge ${cls}">${label}</span></td>
+              <td>${timeStr}</td>
+            </tr>`;
+          }).join('');
         }
 
         document.getElementById('last-updated').textContent =
-            `마지막 갱신: ${new Date().toLocaleTimeString('ko-KR', { hour12: false })}`;
-    } catch (e) {
+          `마지막 갱신: ${new Date().toLocaleTimeString('ko-KR', { hour12: false })}`;
+      } catch (e) {
         console.error('시스템 상태 로드 실패:', e);
         document.getElementById('stat-db-status').innerHTML =
-            `<span class="badge badge-error">연결 실패</span>`;
+          `<span class="badge badge-error">연결 실패</span>`;
         document.getElementById('stat-db-latency').textContent = '측정 불가';
         showToast('서버 연결 오류 — 모니터링 데이터를 가져올 수 없습니다.', 'error');
+      }
     }
-}
 
-// ================================================================
-// 초기화
-// ================================================================
-(async () => {
-    await syncServerTime();
-    setInterval(tickClock, 50);           // 시계: 50 ms 간격 (ms 단위 표시)
-    await loadSystemStatus();
-    setInterval(loadSystemStatus, 5000);  // 모니터링: 5초마다
-    setInterval(syncServerTime, 60000);   // 서버 시간 재동기: 1분마다
-})();
-</script>
+    // 초기화
+    (async () => {
+      await syncServerTime();
+      setInterval(tickClock, 50);
+      await loadSystemStatus();
+      setInterval(loadSystemStatus, 5000);
+      setInterval(syncServerTime, 60000);
+    })();
+  </script>
 </body>
 </html>

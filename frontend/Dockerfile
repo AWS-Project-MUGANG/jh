@@ -24,6 +24,7 @@ RUN echo 'server { \
     # CSS, JS 등 폴더 단축 경로 허용 여부 \
     location /css/ { alias /usr/share/nginx/html/css/; } \
     location /js/ { alias /usr/share/nginx/html/js/; } \
+    location /image/ { alias /usr/share/nginx/html/image/; } \
     location /pages/ { alias /usr/share/nginx/html/pages/; } \
     # 사용자 편의를 위한 단축 경로 (pages 폴더 생략본 허용) \
     location /student/ { alias /usr/share/nginx/html/pages/student/; } \

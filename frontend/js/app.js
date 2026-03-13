@@ -51,7 +51,7 @@ function switchTab(tabName) {
     document.querySelectorAll('.sidebar-nav .nav-item').forEach(btn => btn.classList.remove('active'));
     // 모든 패널 숨김
     document.querySelectorAll('.content-area .panel').forEach(panel => {
-        panel.style.display = 'none';
+        panel.style.display = 'none'; // 인라인 스타일로 강제 숨김
         panel.classList.remove('active');
     });
     
@@ -60,7 +60,7 @@ function switchTab(tabName) {
 
     if (targetPanel && targetTab) {
         targetTab.classList.add('active');
-        targetPanel.style.display = 'block';
+        targetPanel.style.display = 'block'; // 인라인 스타일로 강제 표시
         targetPanel.classList.add('active');
         
         // 특정 탭 진입 시 초기화 로직
@@ -687,105 +687,286 @@ async function loadUserProfile() {
     } catch (e) { console.error('Failed to load user profile:', e); }
 }
 
+
 // --- 챗봇 기능 추가 ---
+let chatMode = 'QA'; // 'QA' or 'RECOMMEND'
+
 function initChatbot() {
     // 이미 생성되었으면 중단
-    if (document.getElementById('chatbot-container')) return;
+    if (document.getElementById('chatbotPanel')) return;
 
-    // 1. 챗봇 아이콘 버튼 (우측 하단)
-    const iconHTML = `
-        <div id="chatbot-icon" onclick="toggleChat()" 
-             style="position:fixed; bottom:20px; right:20px; width:60px; height:60px; background:#2e7d32; border-radius:50%; cursor:pointer; display:flex; justify-content:center; align-items:center; box-shadow:0 4px 10px rgba(0,0,0,0.3); z-index:9999; transition: transform 0.2s;">
-            <span style="font-size:30px;">🤖</span>
-        </div>`;
-    
-    // 2. 채팅창 컨테이너 (초기엔 숨김)
-    const chatHTML = `
-        <div id="chatbot-container" style="display:none; position:fixed; bottom:90px; right:20px; width:360px; height:520px; background:white; border:1px solid #ddd; border-radius:12px; box-shadow:0 5px 20px rgba(0,0,0,0.2); flex-direction:column; z-index:9999; overflow:hidden; font-family:'Noto Sans KR', sans-serif;">
-            <!-- 헤더 -->
-            <div style="background:#2e7d32; color:white; padding:15px; font-weight:bold; display:flex; justify-content:space-between; align-items:center; font-size:1.1rem;">
-                <span>🎓 무강대 AI 학사 도우미</span>
-                <button onclick="toggleChat()" style="background:none; border:none; color:white; cursor:pointer; font-size:1.2rem;">✖</button>
-            </div>
-            
-            <!-- 메시지 영역 -->
-            <div id="chat-messages" style="flex:1; padding:15px; overflow-y:auto; background:#f5f5f5; display:flex; flex-direction:column; gap:10px;">
-                <div style="align-self:flex-start; background:white; padding:10px 14px; border-radius:12px 12px 12px 0; max-width:85%; box-shadow:0 1px 2px rgba(0,0,0,0.1); border:1px solid #eee;">
-                    안녕하세요! 👋<br>2026학년도 학사 규정에 대해 무엇이든 물어보세요.
-                </div>
-            </div>
-            
-            <!-- 입력 영역 -->
-            <div style="border-top:1px solid #eee; padding:12px; display:flex; background:white;">
-                <input type="text" id="chat-input" placeholder="질문을 입력하세요..." style="flex:1; padding:10px; border:1px solid #ddd; border-radius:20px; outline:none; font-size:0.95rem;" onkeypress="if(event.key==='Enter') sendChatMessage()">
-                <button onclick="sendChatMessage()" style="margin-left:8px; padding:0 15px; background:#2e7d32; color:white; border:none; border-radius:20px; cursor:pointer; font-weight:bold;">전송</button>
-            </div>
-        </div>
-    `;
+    // fe2 챗봇 HTML 구조
+    const container = document.createElement('div');
+    container.innerHTML = `
+<!-- ── 챗봇 플로팅 버튼 ── -->
+<button class="chatbot-fab" id="chatbotFab" aria-label="챗봇 열기" title="수강신청 도우미">
+  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+    <path stroke-linecap="round" stroke-linejoin="round"
+      d="M8 10h.01M12 10h.01M16 10h.01M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2v10z"/>
+  </svg>
+</button>
 
-    document.body.insertAdjacentHTML('beforeend', iconHTML + chatHTML);
+<!-- ── 챗봇 패널 ── -->
+<div class="chatbot-panel" id="chatbotPanel" role="dialog" aria-label="수강신청 도우미 챗봇">
+  <div class="chatbot-header">
+    <div class="chatbot-header-avatar">
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round"
+          d="M9 3H5a2 2 0 00-2 2v4m6-6h10a2 2 0 012 2v4M9 3v18m0 0h10a2 2 0 002-2V9m-12 12H5a2 2 0 01-2-2V9m0 0h18"/>
+      </svg>
+    </div>
+    <div class="chatbot-header-info">
+      <div class="chatbot-header-title">수강신청 도우미</div>
+      <div class="chatbot-header-sub">무강대학교 학사 AI</div>
+    </div>
+    <button class="chatbot-close-btn" id="chatbotClose" aria-label="닫기">
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+      </svg>
+    </button>
+  </div>
+
+  <div class="chatbot-messages" id="chatbotMessages"></div>
+
+  <div class="chatbot-quick" id="chatbotQuick">
+    <button class="quick-btn" data-msg="수강신청 방법이 궁금해요">신청 방법</button>
+    <button class="quick-btn" data-mode="recommend" style="border-color:#ff9800; color:#e65100;">🤖 AI 맞춤 과목 추천 (자동 담기)</button>
+    <button class="quick-btn" data-msg="수강 취소는 어떻게 하나요?">수강 취소</button>
+    <button class="quick-btn" data-msg="최대 신청 가능 학점이 몇 학점인가요?">최대 학점</button>
+    <button class="quick-btn" data-msg="수강신청 기간이 언제예요?">신청 기간</button>
+  </div>
+
+  <div class="chatbot-input-area">
+    <textarea class="chatbot-input" id="chatbotInput" placeholder="질문을 입력하세요..." rows="1" maxlength="300"></textarea>
+    <button class="chatbot-send-btn" id="chatbotSend" aria-label="전송" disabled>
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M12 19V5m0 0l-7 7m7-7l7 7"/>
+      </svg>
+    </button>
+  </div>
+</div>
+    `.trim();
+
+    document.body.appendChild(container.firstElementChild); // fab
+    document.body.appendChild(container.lastElementChild);  // panel
+
+    const fab = document.getElementById('chatbotFab');
+    const panel = document.getElementById('chatbotPanel');
+    const closeBtn = document.getElementById('chatbotClose');
+    const messages = document.getElementById('chatbotMessages');
+    const input = document.getElementById('chatbotInput');
+    const sendBtn = document.getElementById('chatbotSend');
+    const quickArea = document.getElementById('chatbotQuick');
+
+    let opened = false;
+
+    // 현재 시간 포맷팅
+    function nowTime() {
+        const d = new Date();
+        const h = String(d.getHours()).padStart(2, '0');
+        const m = String(d.getMinutes()).padStart(2, '0');
+        return `${h}:${m}`;
+    }
+
+    // 채팅 버블 추가 UI
+    function appendMsg(role, text, skipAvatar) {
+        const wrap = document.createElement('div');
+        wrap.className = `chat-msg ${role}`;
+
+        if (role === 'bot' && !skipAvatar) {
+            const av = document.createElement('div');
+            av.className = 'chat-msg-avatar';
+            av.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+            </svg>`;
+            wrap.appendChild(av);
+        }
+
+        const bubble = document.createElement('div');
+        bubble.className = 'chat-bubble';
+        bubble.innerHTML = text.replace(/\n/g, '<br>');
+        wrap.appendChild(bubble);
+
+        const time = document.createElement('span');
+        time.className = 'chat-time';
+        time.textContent = nowTime();
+        wrap.appendChild(time);
+
+        messages.appendChild(wrap);
+        messages.scrollTop = messages.scrollHeight;
+        return wrap;
+    }
+
+    // 타이핑(로딩) 인디케이터
+    function showTyping() {
+        const wrap = document.createElement('div');
+        wrap.className = 'chat-msg bot chat-typing';
+        wrap.id = 'typingIndicator';
+
+        const av = document.createElement('div');
+        av.className = 'chat-msg-avatar';
+        av.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+        </svg>`;
+        wrap.appendChild(av);
+
+        const bubble = document.createElement('div');
+        bubble.className = 'chat-bubble';
+        bubble.innerHTML = '<span class="typing-dot"></span><span class="typing-dot"></span><span class="typing-dot"></span>';
+        wrap.appendChild(bubble);
+
+        messages.appendChild(wrap);
+        messages.scrollTop = messages.scrollHeight;
+        return wrap;
+    }
+
+    // 실제 전송 로직
+    async function handleSend() {
+        const text = input.value.trim();
+        if (!text) return;
+        
+        // 빠른 선택 버튼 숨기기
+        document.getElementById('chatbotQuick').style.display = 'none';
+
+        input.value = '';
+        input.style.height = 'auto';
+        sendBtn.disabled = true;
+
+        appendMsg('user', text);
+        const typing = showTyping();
+
+        try {
+            if (chatMode === 'RECOMMEND') {
+                // 추천 모드
+                const res = await fetch('/api/v1/student/ai/recommend', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        user_id: parseInt(userId || 0),
+                        preference: text
+                    })
+                });
+                
+                typing.remove();
+                if (res.ok) {
+                    const data = await res.json();
+                    appendMsg('bot', `✅ 추천 완료!\n${data.message}\n(장바구니 내역을 확인해주세요)`);
+                    if (typeof loadEnrollments === 'function') await loadEnrollments(); // 갱신
+                } else {
+                    const data = await res.json();
+                    appendMsg('bot', `❌ 추천 실패: ${data.detail || '알 수 없는 오류'}`);
+                }
+                
+                // 다시 일반 모드로 복귀
+                chatMode = 'QA';
+                input.placeholder = "질문을 입력하세요...";
+                document.getElementById('chatbotQuick').style.display = 'flex';
+                
+            } else {
+                // 일반 대화 모드
+                const res = await fetch('/api/v1/chat/ask', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        user_id: parseInt(userId || 0),
+                        session_id: `sess_${userId || 'guest'}`,
+                        message: text
+                    })
+                });
+
+                typing.remove();
+                if (res.ok) {
+                    const data = await res.json();
+                    appendMsg('bot', data.reply || '답변이 없습니다.');
+                } else {
+                    appendMsg('bot', '❌ 오류가 발생했습니다. 잠시 후 다시 시도해주세요.');
+                }
+            }
+        } catch (e) {
+            console.error(e);
+            typing.remove();
+            appendMsg('bot', '❌ 서버 연결에 실패했습니다.');
+            if (chatMode === 'RECOMMEND') {
+                chatMode = 'QA';
+                input.placeholder = "질문을 입력하세요...";
+                document.getElementById('chatbotQuick').style.display = 'flex';
+            }
+        }
+        
+        sendBtn.disabled = input.value.trim().length === 0;
+    }
+
+    function openPanel() {
+        panel.classList.add('open');
+        opened = true;
+        fab.setAttribute('aria-label', '챗봇 닫기');
+        if (messages.children.length === 0) {
+            setTimeout(() => {
+                appendMsg('bot', '안녕하세요! 무강대학교 수강신청 도우미입니다.\n수강신청, 시간표, 학점 등 궁금한 점을 질문해 주세요 😊');
+            }, 300);
+        }
+        setTimeout(() => input.focus(), 250);
+    }
+
+    function closePanel() {
+        panel.classList.remove('open');
+        opened = false;
+        fab.setAttribute('aria-label', '챗봇 열기');
+    }
+
+    fab.addEventListener('click', () => opened ? closePanel() : openPanel());
+    closeBtn.addEventListener('click', closePanel);
+
+    document.addEventListener('keydown', e => {
+        if (e.key === 'Escape' && opened) closePanel();
+    });
+
+    sendBtn.addEventListener('click', handleSend);
+
+    input.addEventListener('keydown', e => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            if (!sendBtn.disabled) handleSend();
+        }
+    });
+
+    input.addEventListener('input', () => {
+        sendBtn.disabled = input.value.trim().length === 0;
+        input.style.height = 'auto';
+        input.style.height = Math.min(input.scrollHeight, 90) + 'px';
+    });
+
+    // 빠른 메뉴 (Quick Buttons)
+    quickArea.addEventListener('click', e => {
+        const btn = e.target.closest('.quick-btn');
+        if (!btn) return;
+        
+        if (btn.dataset.mode === 'recommend') {
+            // 추천 모드로 변경
+            chatMode = 'RECOMMEND';
+            quickArea.style.display = 'none';
+            appendMsg('bot', '🎨 **AI 맞춤 과목 추천 모드**입니다.\n학생의 전공과 이수 학점을 분석하여 이번 학기 최적의 시간표를 장바구니에 자동으로 담아드립니다.\n어떤 조건으로 시간표를 짤까요? (예: "금요일 공강 만들어줘", "오전 수업 위주로")');
+            input.placeholder = "요청사항을 입력해주세요...";
+            input.focus();
+        } else if (btn.dataset.msg) {
+            input.value = btn.dataset.msg;
+            sendBtn.disabled = false;
+            handleSend();
+        }
+    });
 }
 
-// 채팅창 열기/닫기 토글
+// ── 기존 함수명 더미 ──
+// dashboard.html 에서 onclick="requestAIRecommend()" 호출이 남아 있을 수 있으니 더미 유지 또는 챗봇 열려있게 유도
+window.requestAIRecommend = function() {
+    alert("화면 우측 하단의 챗봇 버튼을 통해 AI 맞춤 추천 기능을 이용해주세요.");
+};
 window.toggleChat = function() {
-    const container = document.getElementById('chatbot-container');
-    const icon = document.getElementById('chatbot-icon');
-    
-    if (container.style.display === 'none') {
-        container.style.display = 'flex';
-        icon.style.transform = 'scale(0)'; // 아이콘 숨김 효과
-        setTimeout(() => document.getElementById('chat-input').focus(), 100);
-    } else {
-        container.style.display = 'none';
-        icon.style.transform = 'scale(1)';
-    }
+    const fab = document.getElementById('chatbotFab');
+    if(fab) fab.click();
 };
+window.sendChatMessage = function() {};
 
-// 메시지 전송 로직
-window.sendChatMessage = async function() {
-    const input = document.getElementById('chat-input');
-    const msg = input.value.trim();
-    if (!msg) return;
-
-    const chatBox = document.getElementById('chat-messages');
-
-    // 1. 사용자 메시지 표시
-    chatBox.insertAdjacentHTML('beforeend', `<div style="align-self:flex-end; background:#2e7d32; color:white; padding:10px 14px; border-radius:12px 12px 0 12px; max-width:85%; box-shadow:0 1px 2px rgba(0,0,0,0.1); word-break: break-word;">${msg}</div>`);
-    input.value = '';
-    chatBox.scrollTop = chatBox.scrollHeight;
-
-    // 2. 로딩 표시
-    const loadingId = 'loading-' + Date.now();
-    chatBox.insertAdjacentHTML('beforeend', `<div id="${loadingId}" style="align-self:flex-start; background:white; padding:10px 14px; border-radius:12px 12px 12px 0; max-width:85%; border:1px solid #eee; color:#666;">답변 생성 중... 💬</div>`);
-    chatBox.scrollTop = chatBox.scrollHeight;
-
-    try {
-        const res = await fetch('/api/v1/chat/ask', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                user_id: parseInt(userId || 0),
-                session_id: `sess_${userId || 'guest'}`, // 세션 ID 생성
-                message: msg
-            })
-        });
-
-        document.getElementById(loadingId)?.remove();
-
-        if (res.ok) {
-            const data = await res.json();
-            // 3. AI 답변 표시
-            chatBox.insertAdjacentHTML('beforeend', `<div style="align-self:flex-start; background:white; padding:10px 14px; border-radius:12px 12px 12px 0; max-width:85%; box-shadow:0 1px 2px rgba(0,0,0,0.1); border:1px solid #eee; line-height:1.5;">${data.reply.replace(/\n/g, '<br>')}</div>`);
-        } else {
-            chatBox.insertAdjacentHTML('beforeend', `<div style="align-self:flex-start; background:#ffebee; color:#c62828; padding:10px 14px; border-radius:12px; border:1px solid #ffcdd2;">오류가 발생했습니다. 잠시 후 다시 시도해주세요.</div>`);
-        }
-    } catch (e) {
-        console.error(e);
-        document.getElementById(loadingId)?.remove();
-        chatBox.insertAdjacentHTML('beforeend', `<div style="align-self:flex-start; background:#ffebee; color:#c62828; padding:10px 14px; border-radius:12px;">서버 연결에 실패했습니다.</div>`);
-    }
-    chatBox.scrollTop = chatBox.scrollHeight;
-};
 
 // 초기화
 window.onload = async function() {

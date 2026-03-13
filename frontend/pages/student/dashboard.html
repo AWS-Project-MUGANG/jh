@@ -1,457 +1,374 @@
 <!DOCTYPE html>
 <html lang="ko">
-
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>무강대학교 AI 학사행정 서비스</title>
-    <link rel="stylesheet" href="../../css/main.css">
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>무강대학교 수강신청</title>
+  <link rel="stylesheet" href="/css/style.css?v=6" />
+  <link rel="stylesheet" href="/css/dashboard.css?v=6" />
+  <link rel="stylesheet" href="/css/chatbot.css?v=6" />
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700&family=Inria+Serif&display=swap" rel="stylesheet" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <style>
+    /* ─── fe2 디자인 스타일 적용 ─── */
+    .sidebar-profile {
+      background: var(--navy);
+      padding: 20px 20px 18px;
+    }
+    .profile-top {
+      display: flex;
+      align-items: baseline;
+      gap: 12px;
+      margin-bottom: 10px;
+    }
+    .profile-name { font-size: 18px; font-weight: 600; color: var(--white); letter-spacing: -0.3px; }
+    .profile-id { font-size: 14px; color: rgba(255,255,255,0.75); }
+    
+    /* 기존 p 태그가 아닌 fe2의 텍스트 구조 유지 */
+    .profile-dept {
+      font-size: 13px;
+      line-height: 1.6;
+      color: var(--text-muted);
+    }
+    
+    .sidebar-nav .nav-item {
+      display: block;
+      width: 100%;
+      text-align: left;
+      background: none;
+      border: none;
+      cursor: pointer;
+      font-family: inherit;
+      padding: 13px 20px;
+      font-size: 15px;
+      font-weight: 500;
+      color: var(--navy);
+      transition: background 0.15s ease;
+    }
+    .sidebar-nav .nav-item:hover { background: #eef2fb; }
+    .sidebar-nav .nav-item.active {
+      background: var(--blue-accent);
+      font-weight: 600;
+      border-left: 3px solid var(--navy);
+    }
+    .sidebar-nav .nav-item.logout { color: #c0392b; margin-top: 4px; }
+    .sidebar-nav .nav-item.logout:hover { background: #fff0f0; border-left: none; }
+
+    /* Native select element styled to match fe2 .filter-select */
+    .filter-bar select {
+      appearance: none;
+      -webkit-appearance: none;
+      -moz-appearance: none;
+      background: white url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="10" height="6"><path fill="%23152747" d="M0 0l5 6 5-6z"/></svg>') no-repeat right 14px center;
+      background-size: 10px 6px;
+      border: none;
+      border-radius: 4px;
+      padding: 0 34px 0 14px;
+      height: 40px;
+      min-width: 180px;
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--navy);
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    .filter-bar select:hover { background: #c8c8c8; }
+    .filter-bar select:focus { outline: none; }
+
+    /* 담기 버튼 (fe2 btn-register 스타일 완벽 동기화) */
+    .btn-apply {
+      display: block;
+      margin: 0 auto;
+      background: var(--navy);
+      color: var(--white);
+      border: none;
+      border-radius: 4px;
+      padding: 5px 14px;
+      font-size: 12.5px;
+      font-weight: 600;
+      font-family: 'Noto Sans KR', sans-serif;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: background 0.15s, transform 0.1s;
+      min-width: 80px;
+    }
+    .btn-apply:hover {
+      background: var(--navy-light);
+      transform: translateY(-1px);
+    }
+    .btn-apply:active { transform: translateY(0); }
+    .btn-apply:disabled { background: #bbb; cursor: not-allowed; transform: none; }
+    
+    .btn-apply.registered {
+      background: #c0392b;
+    }
+    .btn-apply.registered:hover {
+      background: #a93226;
+    }
+
+    #stats-area {
+      margin-bottom: 24px;
+      padding: 16px 20px;
+      background: var(--white);
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      box-shadow: 0 1px 4px rgba(21,39,71,0.05);
+      font-size: 14px;
+      color: var(--text-dark);
+    }
+
+    /* ─── 시간표 / 모달 등 ─── */
+    .panel { display: none; }
+    .panel.active { display: block; }
+    .content-area { width: 100%; }
+
+    .timetable-wrapper { background: white; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+    .schedule-table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+    .schedule-table th, .schedule-table td { border: 1px solid var(--border); padding: 8px 5px; text-align: center; word-break: break-all; vertical-align: middle; }
+    .schedule-table th { background-color: var(--blue-bg); font-weight: 600; color: var(--navy); font-size: 13px; }
+    .schedule-table th:first-child { width: 80px; }
+    .time-cell { background-color: var(--blue-bg); width: 80px; color: #555; font-size: 13px; line-height: 1.3; }
+    .schedule-table td { height: 60px; font-size: 13px; }
+
+    .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 9999; align-items: center; justify-content: center; }
+    .modal-content { background: white; padding: 30px; border-radius: 12px; width: 400px; text-align: center; box-shadow: 0 4px 20px rgba(0,0,0,0.2); }
+    .btn-approve { background-color: var(--navy); color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; font-weight: bold; font-family: 'Noto Sans KR', sans-serif; transition: background-color 0.2s; }
+    .btn-approve:hover { background-color: var(--navy-light); }
+
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+  </style>
 </head>
-
 <body>
-    <div class="app-container">
-        <!-- 사이드바 영역 -->
-        <aside class="sidebar">
-            <div class="sidebar-header">
-                <div class="student-info">
-                    <span class="name">-</span>
-                    <span class="id">-</span>
-                </div>
-                <div class="department-info">
-                    <p>-</p>
-                    <p class="sub-dept">- <span class="year"></span></p>
-                </div>
-            </div>
-
-            <nav class="sidebar-nav">
-                <button class="nav-item active" id="tab-sugang" onclick="switchTab('sugang')">수강 신청</button>
-                <button class="nav-item" id="tab-timetable" onclick="switchTab('timetable')">시간표</button>
-                <button class="nav-item" onclick="location.href='chat.html'">AI 학사 비서 (챗봇)</button>
-                <button class="nav-item logout-btn" onclick="location.href='../auth/login.html'">로그아웃</button>
-            </nav>
-        </aside>
-
-        <!-- 메인 콘텐츠 영역 -->
-        <main class="main-content">
-            <header class="top-header">
-                <div class="logo-area">
-                    <h1>무강대학교</h1>
-                    <span class="logo-sub">Mugang University</span>
-                </div>
-            </header>
-
-            <div class="content-area">
-
-                <!-- 수강신청 탭 패널 -->
-                <div id="panel-sugang" class="panel active">
-                    <!-- 필터 영역 -->
-                    <div class="filter-bar">
-                        <select id="filter-college" onchange="onCollegeChange()">
-                            <option value="">전체 단과대학</option>
-                        </select>
-                        <select id="filter-department" onchange="applyFilter()">
-                            <option value="">전체 학과</option>
-                        </select>
-                        <select id="filter-type" onchange="applyFilter()">
-                            <option value="">전체 과목 구분</option>
-                            <option value="전공필수">전공필수</option>
-                            <option value="전공선택">전공선택</option>
-                            <option value="교양필수">교양필수</option>
-                            <option value="교양선택">교양선택</option>
-                            <option value="교직">교직</option>
-                            <option value="공통">공통</option>
-                        </select>
-                        <select id="filter-grade" onchange="applyFilter()">
-                            <option value="">전체 학년</option>
-                            <option value="1">1학년</option>
-                            <option value="2">2학년</option>
-                            <option value="3">3학년</option>
-                            <option value="4">4학년</option>
-                        </select>
-                    </div>
-
-                    <!-- 공지사항 미리보기 영역 추가 -->
-                    <!-- <section class="list-section"
-                        style="margin-bottom: 25px; border-left: 5px solid var(--primary-color); padding-left: 15px;">
-                        <h3>📌 학교 공지사항</h3>
-                        <div id="student-notice-list"
-                            style="max-height: 150px; overflow-y: auto; background: white; padding: 10px; border-radius: 4px;">
-                            <p style="color:#888;">공지사항을 불러오는 중...</p>
-                        </div>
-                    </section> -->
-
-                    <!-- 수강신청 기간 안내 배너 추가 -->
-                    <div id="enrollment-period-banner"
-                        style="display:none; background: #fff3e0; border: 1px solid #ffe0b2; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
-                        <span style="font-weight: bold; color: #e65100;">🚨 수강신청 안내:</span>
-                        <span id="enrollment-period-text" style="margin-left: 10px;"></span>
-                    </div>
-
-                    <!-- 장바구니 내역 -->
-                    <section class="cart-section">
-                        <div id="stats-area"
-                            style="margin-bottom:20px; padding:15px; background:#e3f2fd; border-radius:8px; border:1px solid #bbdefb; font-size: 1.1rem;">
-                            <strong>나의 이수 내역 요약: </strong>
-                            총 이수 학점 <span id="stat-total" style="color:#d32f2f; font-weight:bold;">0</span> / <span
-                                id="stat-req">25</span> 학점
-                        </div>
-
-                        <h2>장바구니 및 수강신청 내역</h2>
-                        <div class="table-wrapper">
-                            <table class="data-table">
-                                <thead>
-                                    <tr>
-                                        <th>단과대학</th>
-                                        <th>개설학과</th>
-                                        <th>과목명</th>
-                                        <th>신청상태</th>
-                                        <th>강의실</th>
-                                        <th>학점</th>
-                                        <th>담당교수</th>
-                                        <th>수강신청</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="cart-tbody">
-                                    <!-- JS에서 동적으로 채워짐 -->
-                                </tbody>
-                            </table>
-                        </div>
-                    </section>
-
-                    <!-- 수강신청 목록 -->
-                    <section class="list-section">
-                        <h2>수강신청 (전체 강의)</h2>
-                        <div class="table-wrapper">
-                            <table class="data-table">
-                                <thead>
-                                    <tr>
-                                        <th>단과대학</th>
-                                        <th>개설학과</th>
-                                        <th>과목명</th>
-                                        <th>과목구분</th>
-                                        <th>담당교수</th>
-                                        <th>강의실</th>
-                                        <th>학점</th>
-                                        <th>정원</th>
-                                        <th>담기</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="sugang-tbody">
-                                    <!-- JS에서 동적으로 채워짐 -->
-                                </tbody>
-                            </table>
-                        </div>
-                    </section>
-                </div>
-
-                <!-- AI 수강 추천 팝업 (Floating Button) -->
-                <button onclick="document.getElementById('aiRecommendModal').style.display='flex'"
-                    style="position:fixed; bottom: 30px; right: 30px; width: 60px; height: 60px; border-radius: 50%; background-color: #ff9800; color: white; border: none; font-size: 24px; box-shadow: 0 4px 6px rgba(0,0,0,0.3); cursor: pointer; display: flex; align-items: center; justify-content: center; z-index: 100;">
-                    🤖
-                </button>
-
-                <!-- AI 수강 추천 모달 -->
-                <div class="modal-overlay" id="aiRecommendModal"
-                    style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:1000; align-items:center; justify-content:center;">
-                    <div class="modal-content"
-                        style="background:white; padding:30px; border-radius:12px; width:400px; text-align:center;">
-                        <h2 style="color:#ff9800; margin-bottom:10px;">🤖 AI 맞춤 과목 추천</h2>
-                        <p style="font-size:0.9rem; color:#666; margin-bottom:20px;">
-                            학생의 전공과 이수 학점을 분석하여<br>이번 학기 최적의 시간표를 장바구니에 담아드립니다.
-                        </p>
-                        <textarea id="aiPrefInput" placeholder="요청사항 (예: 금요일 공강 만들어줘, 오전 수업 위주로 설계해줘)"
-                            style="width:100%; height:80px; padding:10px; margin-bottom:20px; border:1px solid #ddd; border-radius:4px; resize:none;"></textarea>
-
-                        <div id="aiLoadingIndicator"
-                            style="display:none; margin-bottom:20px; color:#ff9800; font-weight:bold;">
-                            <span class="spinner"
-                                style="display:inline-block; width:20px; height:20px; border:3px solid #f3f3f3; border-top:3px solid #ff9800; border-radius:50%; animation: spin 1s linear infinite;"></span>
-                            AI가 일정을 분석하는 중입니다...
-                        </div>
-
-                        <div style="display:flex; gap:10px; justify-content:center;">
-                            <button onclick="requestAIRecommend()" class="btn-approve"
-                                style="background:#ff9800; border:none; padding:10px 20px; color:white; border-radius:4px; cursor:pointer; font-weight:bold;">추천
-                                받기 (자동 담기)</button>
-                            <button onclick="document.getElementById('aiRecommendModal').style.display='none'"
-                                style="background:#ccc; border:none; padding:10px 20px; color:#333; border-radius:4px; cursor:pointer;">닫기</button>
-                        </div>
-                    </div>
-                </div>
-                <!-- CSS Keyframes for Spinner -->
-                <style>
-                    @keyframes spin {
-                        0% {
-                            transform: rotate(0deg);
-                        }
-
-                        100% {
-                            transform: rotate(360deg);
-                        }
-                    }
-                </style>
-
-                <!-- 시간표 탭 패널 -->
-                <div id="panel-timetable" class="panel" style="display: none;">
-                    <div class="timetable-wrapper">
-                        <table class="schedule-table">
-                            <thead>
-                                <tr>
-                                    <th></th>
-                                    <th>월</th>
-                                    <th>화</th>
-                                    <th>수</th>
-                                    <th>목</th>
-                                    <th>금</th>
-                                    <th>토</th>
-                                </tr>
-                            </thead>
-                            <tbody id="timetable-tbody">
-                                <tr>
-                                    <td class="time-cell">09:00<br>-<br>09:50</td>
-                                    <td></td>
-                                    <td></td>
-                                    <td></td>
-                                    <td></td>
-                                    <td></td>
-                                    <td></td>
-                                </tr>
-                                <tr>
-                                    <td class="time-cell">10:00<br>-<br>10:50</td>
-                                    <td></td>
-                                    <td></td>
-                                    <td></td>
-                                    <td></td>
-                                    <td></td>
-                                    <td></td>
-                                </tr>
-                                <tr>
-                                    <td class="time-cell">11:00<br>-<br>11:50</td>
-                                    <td></td>
-                                    <td></td>
-                                    <td></td>
-                                    <td></td>
-                                    <td></td>
-                                    <td></td>
-                                </tr>
-                                <tr>
-                                    <td class="time-cell">12:00<br>-<br>12:50</td>
-                                    <td></td>
-                                    <td></td>
-                                    <td></td>
-                                    <td></td>
-                                    <td></td>
-                                    <td></td>
-                                </tr>
-                                <tr>
-                                    <td class="time-cell">13:00<br>-<br>13:50</td>
-                                    <td></td>
-                                    <td></td>
-                                    <td></td>
-                                    <td></td>
-                                    <td></td>
-                                    <td></td>
-                                </tr>
-                                <tr>
-                                    <td class="time-cell">14:00<br>-<br>14:50</td>
-                                    <td></td>
-                                    <td></td>
-                                    <td></td>
-                                    <td></td>
-                                    <td></td>
-                                    <td></td>
-                                </tr>
-                                <tr>
-                                    <td class="time-cell">15:00<br>-<br>15:50</td>
-                                    <td></td>
-                                    <td></td>
-                                    <td></td>
-                                    <td></td>
-                                    <td></td>
-                                    <td></td>
-                                </tr>
-                                <tr>
-                                    <td class="time-cell">16:00<br>-<br>16:50</td>
-                                    <td></td>
-                                    <td></td>
-                                    <td></td>
-                                    <td></td>
-                                    <td></td>
-                                    <td></td>
-                                </tr>
-                                <tr>
-                                    <td class="time-cell">17:00<br>-<br>17:50</td>
-                                    <td></td>
-                                    <td></td>
-                                    <td></td>
-                                    <td></td>
-                                    <td></td>
-                                    <td></td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-
-                <!-- 증명서 발급 탭 패널 (새로 추가됨) -->
-                <!-- <div id="panel-certificate" class="panel" style="display: none;">
-                    <section class="list-section">
-                        <h2>인터넷 제증명 발급 센터</h2>
-                        <div
-                            style="background:white; padding:25px; border-radius:8px; border:1px solid #ddd; margin-top:10px;">
-                            <p style="color:#555; margin-bottom:20px; font-size:1.05rem;">
-                                재학증명서, 성적증명서, 졸업예정증명서 등을 PDF 형식으로 즉시 발급받아 출력할 수 있습니다.<br>
-                                (문서 하단에 워터마크 및 위변조 방지 바코드가 삽입되어 출력됩니다.)
-                            </p>
-                            <div style="display:flex; gap:12px;">
-                                <button class="btn-apply" onclick="generateCertificatePDF()"
-                                    style="background-color:#1976d2; padding:12px 18px; font-size:1rem;">재학증명서
-                                    발급</button>
-                                <button class="btn-apply"
-                                    onclick="alert('✅ 성적증명서 PDF가 발급되었습니다.\\n(브라우저 다운로드 폴더를 확인하세요)')"
-                                    style="background-color:#1976d2; padding:12px 18px; font-size:1rem;">성적증명서 (국문)
-                                    발급</button>
-                                <button class="btn-apply"
-                                    onclick="alert('⚠️ 휴학생은 졸업예정증명서를 발급받을 수 없습니다.\\n조건 불일치(졸업학점 미달 혹은 재학 상태 아님)')"
-                                    style="background-color:#757575; padding:12px 18px; font-size:1rem;">졸업예정증명서
-                                    발급</button>
-                            </div>
-                        </div>
-                    </section>
-                </div> -->
-
-                <!-- 성적 조회 탭 패널 추가 -->
-                <!-- <div id="panel-grades" class="panel" style="display: none;">
-                    <section class="list-section">
-                        <h2>이번 학기 성적 리포트</h2>
-                        <div class="table-wrapper">
-                            <table class="data-table">
-                                <thead>
-                                    <tr>
-                                        <th>과목명</th>
-                                        <th>학점</th>
-                                        <th>점수</th>
-                                        <th>등급</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="student-grade-tbody">
-                                </tbody>
-                            </table>
-                        </div>
-                    </section>
-                </div> -->
-
-                <!-- 프로필 수정 탭 패널 추가 -->
-                <!-- <div id="panel-profile" class="panel" style="display: none;">
-                    <section class="list-section">
-                        <h2>개인 정보 수정</h2>
-                        <div
-                            style="background:white; padding:25px; border-radius:8px; border:1px solid #ddd; max-width: 500px;">
-                            <div style="margin-bottom:15px;">
-                                <label style="display:block; margin-bottom:5px; font-weight:bold;">이름</label>
-                                <input type="text" id="edit-name"
-                                    style="width:100%; padding:10px; border:1px solid #ccc; border-radius:4px;">
-                            </div>
-                            <div style="margin-bottom:15px;">
-                                <label style="display:block; margin-bottom:5px; font-weight:bold;">학과</label>
-                                <input type="text" id="edit-major"
-                                    style="width:100%; padding:10px; border:1px solid #ccc; border-radius:4px;">
-                            </div>
-                            <button class="btn-approve" onclick="updateProfile()"
-                                style="width:100%; padding:12px; font-size:1.1rem;">정보 수정 완료</button>
-                        </div>
-                    </section>
-                </div> -->
-
-            </div>
-        </main>
+  <!-- Header -->
+  <header class="header">
+    <div class="logo-area">
+      <img src="/image/logo.png" alt="무강대학교 로고" class="logo-img" />
     </div>
+  </header>
 
-    </div>
-
-    <!-- Hidden PDF Certificate Template -->
-    <!-- <div id="pdf-certificate-template"
-        style="position: absolute; left: -9999px; top: 0; width: 800px; height: 1131px; background: white; padding: 60px; box-sizing: border-box; font-family: 'Noto Sans KR', sans-serif; display: flex; flex-direction: column; justify-content: space-between;">
-        <div style="text-align: center; border-bottom: 2px solid #333; padding-bottom: 20px;">
-            <h1 style="font-size: 3rem; margin: 0; color: #121858;">무 강 대 학 교</h1>
-            <h2 style="font-size: 1.5rem; margin: 10px 0 0; color: #555; letter-spacing: 5px;">MUGANG UNIVERSITY</h2>
+  <div class="main-layout">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <div class="sidebar-profile student-info">
+        <div class="profile-top">
+          <span class="profile-name name">-</span>
+          <span class="profile-id id">-</span>
         </div>
-        <div style="flex-grow: 1; padding: 40px 20px;">
-            <h2
-                style="text-align: center; font-size: 2.2rem; margin-bottom: 50px; text-decoration: underline; text-underline-offset: 10px;">
-                재 학 증 명 서</h2>
-            <table style="width: 100%; border-collapse: collapse; font-size: 1.2rem;">
+        <div class="profile-divider"></div>
+        <div class="profile-dept department-info">
+          <p>-</p>
+          <span class="sub-dept">-</span>
+        </div>
+      </div>
+      <nav class="sidebar-nav">
+        <!-- 네비게이션 버튼 (fe2 'a' 태그 스타일링 적용) -->
+        <button class="nav-item active" id="tab-sugang" onclick="switchTab('sugang')">수강 신청</button>
+        <button class="nav-item" id="tab-timetable" onclick="switchTab('timetable')">시간표</button>
+        <button class="nav-item logout" onclick="location.href='../auth/login.html'">로그아웃</button>
+      </nav>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="content">
+      <div class="content-area">
+
+        <!-- 수강신청 탭 패널 -->
+        <div id="panel-sugang" class="panel active">
+
+          <!-- 수강신청 기간 안내 배너 -->
+          <div id="enrollment-period-banner" style="display:none; background:#fff3e0; border:1px solid #ffe0b2; padding:15px; border-radius:8px; margin-bottom:20px;">
+            <span style="font-weight:bold; color:#e65100;">🚨 수강신청 안내:</span>
+            <span id="enrollment-period-text" style="margin-left:10px;"></span>
+          </div>
+
+          <!-- 필터 바 (fe2의 filter-bar 디자인에 맞춰 네이티브 select 스타일링) -->
+          <div class="filter-bar">
+            <select id="filter-college" onchange="onCollegeChange()">
+              <option value="">전체 단과대학</option>
+            </select>
+            <select id="filter-department" onchange="applyFilter()">
+              <option value="">전체 학과</option>
+            </select>
+            <select id="filter-type" onchange="applyFilter()">
+              <option value="">전체 과목 구분</option>
+              <option value="전공필수">전공필수</option>
+              <option value="전공선택">전공선택</option>
+              <option value="교양필수">교양필수</option>
+              <option value="교양선택">교양선택</option>
+              <option value="교직">교직</option>
+              <option value="공통">공통</option>
+            </select>
+            <select id="filter-grade" onchange="applyFilter()">
+              <option value="">전체 학년</option>
+              <option value="1">1학년</option>
+              <option value="2">2학년</option>
+              <option value="3">3학년</option>
+              <option value="4">4학년</option>
+            </select>
+          </div>
+          
+          <!-- 이수 내역 요약 (디자인 개선) -->
+          <div id="stats-area">
+            <strong>나의 이수 내역 요약: </strong>
+            총 이수 학점 <span id="stat-total" style="color:#d32f2f; font-weight:bold;">0</span> /
+            <span id="stat-req">25</span> 학점
+          </div>
+
+          <!-- 장바구니 및 수강신청 내역 -->
+          <section class="table-section">
+            <div class="section-header">
+              <h2 class="section-title">장바구니 내역</h2>
+            </div>
+            <div class="table-wrapper">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>단과대학</th>
+                    <th>개설학과</th>
+                    <th>과목명</th>
+                    <th>신청상태</th>
+                    <th>강의실</th>
+                    <th class="center">학점</th>
+                    <th class="center">담당교수</th>
+                    <th class="center">수강신청</th>
+                  </tr>
+                </thead>
+                <tbody id="cart-tbody">
+                  <!-- JS에서 동적으로 채워짐 -->
+                </tbody>
+              </table>
+              <div class="scroll-bar"><div class="scroll-thumb"></div></div>
+            </div>
+          </section>
+
+          <!-- 수강신청 전체 강의 목록 -->
+          <section class="table-section">
+            <div class="section-header section-header-reg">
+              <h2 class="section-title">수강신청</h2>
+            </div>
+            <div class="table-wrapper">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>단과대학</th>
+                    <th>개설학과</th>
+                    <th>과목명</th>
+                    <th>과목구분</th>
+                    <th>담당교수</th>
+                    <th>강의실</th>
+                    <th class="center">학점</th>
+                    <th class="center">정원</th>
+                    <th class="center">수강신청</th>
+                  </tr>
+                </thead>
+                <tbody id="sugang-tbody">
+                  <!-- JS에서 동적으로 채워짐 -->
+                </tbody>
+              </table>
+              <div class="scroll-bar"><div class="scroll-thumb"></div></div>
+            </div>
+          </section>
+        </div>
+
+        <!-- 시간표 탭 패널 -->
+        <div id="panel-timetable" class="panel">
+          <div class="timetable-wrapper">
+            <table class="schedule-table">
+              <thead>
                 <tr>
-                    <td style="padding: 15px; font-weight: bold; width: 120px; border-bottom: 1px solid #ddd;">성 명</td>
-                    <td id="cert-name" style="padding: 15px; border-bottom: 1px solid #ddd;"></td>
+                  <th></th>
+                  <th>월</th>
+                  <th>화</th>
+                  <th>수</th>
+                  <th>목</th>
+                  <th>금</th>
+                  <th>토</th>
+                </tr>
+              </thead>
+              <tbody id="timetable-tbody">
+                <tr>
+                  <td class="time-cell">09:00<br>-<br>09:50</td>
+                  <td></td><td></td><td></td><td></td><td></td><td></td>
                 </tr>
                 <tr>
-                    <td style="padding: 15px; font-weight: bold; border-bottom: 1px solid #ddd;">학 번</td>
-                    <td id="cert-id" style="padding: 15px; border-bottom: 1px solid #ddd;"></td>
+                  <td class="time-cell">10:00<br>-<br>10:50</td>
+                  <td></td><td></td><td></td><td></td><td></td><td></td>
                 </tr>
                 <tr>
-                    <td style="padding: 15px; font-weight: bold; border-bottom: 1px solid #ddd;">소 속</td>
-                    <td id="cert-major" style="padding: 15px; border-bottom: 1px solid #ddd;"></td>
+                  <td class="time-cell">11:00<br>-<br>11:50</td>
+                  <td></td><td></td><td></td><td></td><td></td><td></td>
                 </tr>
                 <tr>
-                    <td style="padding: 15px; font-weight: bold; border-bottom: 1px solid #ddd;">상 태</td>
-                    <td style="padding: 15px; border-bottom: 1px solid #ddd;">재학 (Enrolled)</td>
+                  <td class="time-cell">12:00<br>-<br>12:50</td>
+                  <td></td><td></td><td></td><td></td><td></td><td></td>
                 </tr>
+                <tr>
+                  <td class="time-cell">13:00<br>-<br>13:50</td>
+                  <td></td><td></td><td></td><td></td><td></td><td></td>
+                </tr>
+                <tr>
+                  <td class="time-cell">14:00<br>-<br>14:50</td>
+                  <td></td><td></td><td></td><td></td><td></td><td></td>
+                </tr>
+                <tr>
+                  <td class="time-cell">15:00<br>-<br>15:50</td>
+                  <td></td><td></td><td></td><td></td><td></td><td></td>
+                </tr>
+                <tr>
+                  <td class="time-cell">16:00<br>-<br>16:50</td>
+                  <td></td><td></td><td></td><td></td><td></td><td></td>
+                </tr>
+                <tr>
+                  <td class="time-cell">17:00<br>-<br>17:50</td>
+                  <td></td><td></td><td></td><td></td><td></td><td></td>
+                </tr>
+              </tbody>
             </table>
-            <p style="margin-top: 50px; text-align: center; font-size: 1.2rem; line-height: 1.8;">
-                위 사람은 본 대학교에 재학 중임을 증명합니다.
-            </p>
+          </div>
         </div>
-        <div style="text-align: center; padding-top: 30px;">
-            <p id="cert-date" style="font-size: 1.2rem; margin-bottom: 30px;"></p>
-            <h2
-                style="font-size: 2rem; margin: 0; display: flex; align-items: center; justify-content: center; gap: 20px;">
-                무강대학교 총장 <span
-                    style="display:inline-block; width:60px; height:60px; border-radius:50%; border:3px solid #d32f2f; color:#d32f2f; font-size:0.8rem; line-height:54px; text-align:center;">총장직인</span>
-            </h2>
-        </div>
-    </div> -->
 
-    <!-- 스크립트 연결 -->
-    <script src="../../js/app.js"></script>
+      </div><!-- /.content-area -->
+    </main>
+  </div><!-- /.main-layout -->
 
-    <script>
-        function showCustomModal(title, message, isError = false) {
-            const modal = document.getElementById('customModal');
-            const modalTitle = document.getElementById('modalTitle');
-            const modalMessage = document.getElementById('modalMessage');
-
-            modalTitle.innerText = title;
-            modalMessage.innerHTML = message.replace(/\n/g, '<br>');
-
-            if (isError) {
-                modalTitle.style.color = '#c62828';
-            } else {
-                modalTitle.style.color = '#1565c0';
-            }
-
-            modal.style.display = 'flex';
-        }
-
-        function closeCustomModal() {
-            document.getElementById('customModal').style.display = 'none';
-        }
-    </script>
-
-    <!-- 커스텀 공통 모달 UI -->
-    <div class="modal-overlay" id="customModal"
-        style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:9999; align-items:center; justify-content:center;">
-        <div class="modal-content"
-            style="background:white; padding:30px; border-radius:8px; width:400px; text-align:center; box-shadow: 0 4px 20px rgba(0,0,0,0.2);">
-            <h2 id="modalTitle" style="margin-bottom:15px; font-size:1.5rem;">알림</h2>
-            <p id="modalMessage" style="font-size:1rem; color:#444; margin-bottom:25px; line-height:1.5;"></p>
-            <button onclick="closeCustomModal()" class="btn-approve"
-                style="background:#555; width:100%; padding:10px; font-size:1.1rem;">확인</button>
-        </div>
+  <!-- 커스텀 공통 모달 -->
+  <div class="modal-overlay" id="customModal">
+    <div class="modal-content">
+      <h2 id="modalTitle" style="margin-bottom:15px; font-size:1.5rem;">알림</h2>
+      <p id="modalMessage" style="font-size:1rem; color:#444; margin-bottom:25px; line-height:1.5;"></p>
+      <button onclick="closeCustomModal()" class="btn-approve"
+        style="background:var(--navy); width:100%; padding:10px; font-size:1.1rem;">확인</button>
     </div>
-</body>
+  </div>
 
+  <!-- 스크립트 -->
+  <script src="../../js/app.js?v=8"></script>
+  <script>
+    function showCustomModal(title, message, isError = false) {
+      const modal = document.getElementById('customModal');
+      const modalTitle = document.getElementById('modalTitle');
+      const modalMessage = document.getElementById('modalMessage');
+      modalTitle.innerText = title;
+      modalMessage.innerHTML = message.replace(/\n/g, '<br>');
+      modalTitle.style.color = isError ? '#c62828' : 'var(--navy)';
+      modal.style.display = 'flex';
+    }
+    function closeCustomModal() {
+      document.getElementById('customModal').style.display = 'none';
+    }
+    
+    // app.js 호환을 위해 프로필 학과 정보 UI 업데이트 헬퍼 추가
+    const originalObserver = new MutationObserver(() => {
+      const deptP = document.querySelector('.department-info p');
+      if (deptP && deptP.innerText !== '-') {
+        const displaySpan = document.querySelector('.dept-display');
+        if (displaySpan) displaySpan.innerText = deptP.innerText;
+      }
+    });
+    // DOM이 이미 렌더링 된 경우를 대비한 꼼수 대신, app.js가 innerText로 넣는 곳을 수정:
+    // 실제 app.js는 document.querySelector('.department-info p').innerText = ... 형식으로 넣을 가능성이 큼.
+    // 기존 p 태그 대신 span을 둬서 깨짐 방지
+  </script>
+</body>
 </html>

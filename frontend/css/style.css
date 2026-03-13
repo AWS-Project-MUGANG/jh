@@ -1,0 +1,208 @@
+/* =============================================
+   무강대학교 수강신청 시스템 - Stylesheet
+   ============================================= */
+
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+:root {
+  --navy: #152747;
+  --navy-light: #1e3460;
+  --blue-bg: #F3F7FF;
+  --blue-accent: #D5E3FF;
+  --border: #E2E2E2;
+  --text-dark: #152747;
+  --text-muted: rgba(255, 255, 255, 0.85);
+  --white: #ffffff;
+  --gray-light: #D9D9D9;
+  --scrollbar: #B3B3B3;
+  --sidebar-w: 220px;
+  --header-h: 80px;
+  --btn-registered: #e74c3c;
+}
+
+html, body {
+  height: 100%;
+  font-family: 'Noto Sans KR', sans-serif;
+  background: #f0f2f7;
+  color: var(--text-dark);
+  font-size: 14px;
+}
+
+/* ─── HEADER ─────────────────────────────── */
+.header {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  height: var(--header-h);
+  background: var(--white);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  padding: 0 15px;
+  z-index: 100;
+  box-shadow: 0 1px 4px rgba(21,39,71,0.06);
+}
+
+.logo-area {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin: 320px;
+}
+
+.logo-circle {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: var(--gray-light);
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.logo-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.logo-text {
+  display: flex;
+  flex-direction: column;
+}
+
+.logo-name {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--navy);
+  letter-spacing: -0.3px;
+}
+
+.logo-sub {
+  font-family: 'Inria Serif', serif;
+  font-size: 12px;
+  color: #6b7d9e;
+  margin-top: 1px;
+}
+
+/* ─── MAIN LAYOUT ─────────────────────────── */
+.main-layout {
+  display: flex;
+  margin: 320px;
+  margin-top: var(--header-h);
+  min-height: calc(100vh - var(--header-h));
+}
+
+/* ─── SIDEBAR ─────────────────────────────── */
+.sidebar {
+  width: var(--sidebar-w);
+  background: var(--white);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  position: fixed;
+  top: var(--header-h);
+  left: 320px;
+  bottom: 0;
+  overflow-y: auto;
+  z-index: 50;
+}
+
+.sidebar-profile {
+  background: var(--navy);
+  padding: 20px 20px 18px;
+}
+
+.profile-top {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.profile-name {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--white);
+  letter-spacing: -0.3px;
+}
+
+.profile-id {
+  font-size: 14px;
+  color: rgba(255,255,255,0.75);
+}
+
+.profile-divider {
+  height: 1px;
+  background: rgba(255,255,255,0.2);
+  margin: 10px 0;
+}
+
+.profile-dept {
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--text-muted);
+}
+
+.sidebar-nav {
+  padding: 8px 0;
+  flex: 1;
+}
+
+.nav-item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: none;
+  font-family: inherit;
+  cursor: pointer;
+  padding: 13px 20px;
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--navy);
+  text-decoration: none;
+  transition: background 0.15s ease;
+}
+
+.nav-item:hover {
+  background: #eef2fb;
+}
+
+.nav-item.active {
+  background: var(--blue-accent);
+  color: var(--navy);
+  font-weight: 600;
+  border-left: 3px solid var(--navy);
+}
+
+.nav-item.logout {
+  color: #c0392b;
+  margin-top: 4px;
+}
+
+.nav-item.logout:hover {
+  background: #fff0f0;
+}
+
+/* ─── TABS / PANELS ───────────────────────── */
+.panel {
+  display: none;
+}
+
+.panel.active {
+  display: block;
+}
+
+/* ─── MAIN CONTENT ─────────────────────────── */
+.content {
+  margin-left: var(--sidebar-w);
+  flex: 1;
+  padding: 24px 32px 40px;
+  min-width: 0;
+}
