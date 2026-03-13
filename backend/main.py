@@ -1944,6 +1944,48 @@ def get_system_status(db: Session = Depends(get_db)):
 
 
 
+# --- 임시 DB 보정 엔드포인트 (1회 사용 후 삭제 예정) ---
+@app.post("/api/v1/admin/fix-users")
+def fix_users_once(secret: str, db: Session = Depends(get_db)):
+    """Admin-0012 이름 수정 및 22517717 학과 연결 (임시 엔드포인트)"""
+    if secret != "mugang-fix-2026":
+        raise HTTPException(status_code=403, detail="Forbidden")
+
+    results = []
+
+    # 1. Admin-0012 이름 수정
+    admin = db.query(models.User).filter(models.User.loginid == "Admin-0012").first()
+    if admin:
+        admin.user_name = "임무강"
+        results.append(f"Admin-0012 이름 → 임무강")
+    else:
+        results.append("Admin-0012 없음")
+
+    # 2. 22517717 학과 연결
+    student = db.query(models.User).filter(models.User.loginid == "22517717").first()
+    if student:
+        dept = db.query(models.Depart).filter(
+            models.Depart.depart.ilike("%글로벌ICT%")
+        ).first()
+        if not dept:
+            dept = db.query(models.Depart).filter(
+                models.Depart.college.ilike("%IT%")
+            ).first()
+        if dept:
+            student.dept_no = dept.dept_no
+            results.append(f"22517717 dept_no={dept.dept_no} ({dept.college} / {dept.depart})")
+        else:
+            it_depts = db.query(models.Depart).filter(
+                models.Depart.college.ilike("%IT%") | models.Depart.depart.ilike("%ICT%")
+            ).all()
+            results.append(f"학과 못찾음. IT계열: {[d.depart for d in it_depts]}")
+    else:
+        results.append("22517717 없음")
+
+    db.commit()
+    return {"results": results}
+
+
 # --- 프론트엔드 정적 파일 서빙 ---
 # (API 경로를 먼저 정의한 후 마지막에 마운트해야 API가 우선순위를 가집니다)
 frontend_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "frontend"))
