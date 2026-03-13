@@ -33,7 +33,7 @@ def init_db():
         admin = models.User(
             loginid=admin_id,
             password=hashed_pw,
-            user_name="김무강 교수",
+            user_name="임무강",
             role="STAFF",
             user_status="재직"
         )

@@ -616,6 +616,42 @@ def get_lectures(
     }
 
 
+@app.get("/api/v1/lectures/{lecture_id}")
+def get_lecture_detail(lecture_id: int, db: Session = Depends(get_db)):
+    """단일 강의 조회 (시간표 캐시용)"""
+    lec = db.query(models.Lecture).options(
+        selectinload(models.Lecture.schedules),
+        joinedload(models.Lecture.depart)
+    ).filter(models.Lecture.lecture_id == lecture_id).first()
+
+    if not lec:
+        raise HTTPException(status_code=404, detail="강의를 찾을 수 없습니다.")
+
+    schedules = [
+        {
+            "day_of_week": s.day_of_week,
+            "start_time": str(s.start_time) if s.start_time else None,
+            "end_time": str(s.end_time) if s.end_time else None,
+            "classroom": s.classroom,
+        }
+        for s in lec.schedules
+    ]
+
+    return {
+        "lecture_id": lec.lecture_id,
+        "subject": lec.subject,
+        "college": lec.depart.college if lec.depart else None,
+        "department": lec.depart.depart if lec.depart else lec.department,
+        "credit": lec.credit,
+        "professor": lec.professor,
+        "classroom": schedules[0]["classroom"] if schedules else lec.classroom,
+        "type": lec.type,
+        "capacity": lec.capacity,
+        "count": lec.count,
+        "schedules": schedules,
+    }
+
+
 
 # --- 수강신청 (enrollments) ---
 

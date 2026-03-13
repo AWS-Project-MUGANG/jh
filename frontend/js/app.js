@@ -117,6 +117,15 @@ window.applyFilter = function() {
     loadCourseList(1); // 페이지 초기화 후 서버 재조회
 };
 
+// schedules 배열(API 응답) → times 배열(시간표 렌더링용) 변환
+function schedulesToTimes(schedules) {
+    const DAY_MAP = { '월': 1, '화': 2, '수': 3, '목': 4, '금': 5, '토': 6 };
+    return (schedules || []).map(s => ({
+        day: DAY_MAP[s.day_of_week] || 0,
+        time: s.start_time ? parseInt(s.start_time.split(':')[0]) - 9 : 0
+    })).filter(t => t.day > 0);
+}
+
 // 수강목록 API에서 불러오기 (서버사이드 필터 + 페이지네이션)
 async function loadCourseList(page = 1) {
     try {
@@ -145,6 +154,7 @@ async function loadCourseList(page = 1) {
                 ...lec,
                 id: lec.lecture_id,
                 room: lec.classroom,
+                times: schedulesToTimes(lec.schedules),
             }));
             currentPage = data.page;
             totalPages  = data.total_pages;
@@ -435,7 +445,7 @@ async function loadEnrollments() {
                         const r = await fetch(`/api/v1/lectures/${lid}`);
                         if (r.ok) {
                             const d = await r.json();
-                            enrolledLectureCache[lid] = d;
+                            enrolledLectureCache[lid] = { ...d, times: schedulesToTimes(d.schedules) };
                         }
                     } catch (_) {}
                 }));
