@@ -1576,6 +1576,134 @@ async def upload_rag_document(
         raise HTTPException(status_code=500, detail="문서 처리 중 오류가 발생했습니다.")
 
 
+@app.post("/api/v1/admin/rag/load-csv-data")
+def load_csv_data(db: Session = Depends(get_db)):
+    """
+    관리자용: backend/pdf/ 폴더의 CSV 형식 txt 파일 4개를
+    (enroll.txt, grade.txt, schedule_2026.txt, score.txt)
+    자연어 문장으로 변환하여 RAG 벡터 DB에 일괄 적재합니다.
+    이미 같은 title이 존재하면 건너뜁니다(중복 방지).
+    """
+    base_dir = os.path.dirname(__file__)
+    pdf_dir  = os.path.join(base_dir, "pdf")
+
+    def csv_rows(filename: str):
+        path = os.path.join(pdf_dir, filename)
+        if not os.path.exists(path):
+            raise HTTPException(status_code=404, detail=f"파일을 찾을 수 없습니다: {filename}")
+        with open(path, encoding="utf-8") as f:
+            return list(csv.DictReader(f))
+
+    results = {}
+
+    # ── 1. enroll.txt : 수강신청 학점 기준 ──
+    title_prefix = "수강신청 학점 기준"
+    existing = {r.title for r in db.query(models.RagDocument.title).filter(
+        models.RagDocument.title.like(f"{title_prefix}%")).all()}
+    rows = csv_rows("enroll.txt")
+    count = 0
+    for i, row in enumerate(rows):
+        구분 = row.get("구분","").strip()
+        연간 = row.get("수강신청학점(연간)","").strip()
+        학기 = row.get("수강신청학점(학기)","").strip()
+        비고 = row.get("비고","").strip()
+        parts = []
+        if 연간: parts.append(f"연간 최대 {연간}학점")
+        if 학기: parts.append(f"학기당 최대 {학기}학점")
+        if 비고: parts.append(f"비고: {비고}")
+        chunk = f"{구분}의 수강신청 학점 기준 — " + ", ".join(parts) + "."
+        doc_title = f"{title_prefix} ({i+1})"
+        if doc_title in existing: continue
+        vec = get_embedding(chunk)
+        if vec:
+            db.add(models.RagDocument(title=doc_title, content=chunk, embedding=vec))
+            count += 1
+    results["enroll.txt"] = count
+
+    # ── 2. grade.txt : 학과별 졸업 학점 기준 ──
+    title_prefix = "학과별 졸업학점 기준"
+    existing = {r.title for r in db.query(models.RagDocument.title).filter(
+        models.RagDocument.title.like(f"{title_prefix}%")).all()}
+    rows = csv_rows("grade.txt")
+    count = 0
+    for i, row in enumerate(rows):
+        대학   = row.get("대학","").strip()
+        모집   = row.get("모집단위명","").strip()
+        학과   = row.get("학과(전공)","").strip()
+        교양공 = row.get("교양공통(이상)","").strip()
+        교양균 = row.get("교양균형(이상)","").strip()
+        교양계 = row.get("교양계","").strip()
+        단일   = row.get("단일·심화전공자","").strip()
+        복수   = row.get("복수전공자","").strip()
+        졸업   = row.get("졸업학점","").strip()
+        chunk = (f"{대학} {모집} {학과}의 졸업 요건: "
+                 f"교양공통 {교양공}학점 이상, 교양균형 {교양균}학점 이상, 교양 합계 {교양계}학점, "
+                 f"단일·심화전공자 전공 {단일}학점, 복수전공자 전공 {복수}학점, "
+                 f"총 졸업학점 {졸업}학점.")
+        doc_title = f"{title_prefix} ({i+1})"
+        if doc_title in existing: continue
+        vec = get_embedding(chunk)
+        if vec:
+            db.add(models.RagDocument(title=doc_title, content=chunk, embedding=vec))
+            count += 1
+    results["grade.txt"] = count
+
+    # ── 3. schedule_2026.txt : 2026학년도 학사일정 ──
+    title_prefix = "2026학년도 학사일정"
+    existing = {r.title for r in db.query(models.RagDocument.title).filter(
+        models.RagDocument.title.like(f"{title_prefix}%")).all()}
+    rows = csv_rows("schedule_2026.txt")
+    # 학사일정은 행이 적으므로 전체를 하나의 청크로 묶음
+    lines = [f"{r.get('월','').strip()} {r.get('일자(요일)','').strip()}: {r.get('학사내용','').strip()}"
+             for r in rows if r.get('학사내용','').strip()]
+    chunk_size = 15  # 15행씩 한 청크
+    count = 0
+    for i in range(0, len(lines), chunk_size):
+        chunk = "\n".join(lines[i:i+chunk_size])
+        doc_title = f"{title_prefix} ({i//chunk_size+1})"
+        if doc_title in existing: continue
+        vec = get_embedding(chunk)
+        if vec:
+            db.add(models.RagDocument(title=doc_title, content=chunk, embedding=vec))
+            count += 1
+    results["schedule_2026.txt"] = count
+
+    # ── 4. score.txt : 성적 등급 기준 ──
+    title_prefix = "성적 등급 기준"
+    existing = {r.title for r in db.query(models.RagDocument.title).filter(
+        models.RagDocument.title.like(f"{title_prefix}%")).all()}
+    rows = csv_rows("score.txt")
+    lines = []
+    for row in rows:
+        등급 = row.get("등급","").strip()
+        평점 = row.get("평점","").strip()
+        범위 = row.get("실점(범위)","").strip()
+        if 등급:
+            lines.append(f"{등급}등급: 평점 {평점}점, 실점 {범위}점")
+    chunk = "성적 등급 및 평점 기준표.\n" + "\n".join(lines)
+    doc_title = f"{title_prefix} (1)"
+    count = 0
+    if doc_title not in existing:
+        vec = get_embedding(chunk)
+        if vec:
+            db.add(models.RagDocument(title=doc_title, content=chunk, embedding=vec))
+            count += 1
+    results["score.txt"] = count
+
+    try:
+        db.commit()
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"DB 저장 중 오류: {str(e)}")
+
+    total = sum(results.values())
+    logger.info(f"CSV RAG 적재 완료: {results}")
+    return {
+        "message": f"총 {total}개의 청크가 RAG DB에 저장되었습니다.",
+        "detail": results
+    }
+
+
 @app.post("/api/v1/admin/rag/load-manual")
 def load_manual_from_local(db: Session = Depends(get_db)):
     """
