@@ -285,7 +285,7 @@ def generate_answer_with_bedrock(query: str, context: str) -> str:
         bedrock = boto3.client(service_name='bedrock-runtime', region_name='us-east-1', config=config)
 
         # Claude v2/v2.1 프롬프트
-        prompt = f"\n\nHuman: 당신은 대학교 학사 행정 AI 어시스턴트입니다. 다음의 [참고 문서] 내용을 바탕으로 사용자의 [질문]에 대해 정확하고 친절하게 답변해주세요. 문서에 없는 내용은 지어내지 말고, 정보가 부족하면 모른다고 답하세요.\n\n[참고 문서]\n{context}\n\n[질문]\n{query}\n\nAssistant:"
+        prompt = f"\n\nHuman: 당신은 대학교 학사 행정 AI 어시스턴트입니다. 다음의 [참고 문서] 내용을 바탕으로 사용자의 [질문]에만 해당하는 내용을 간결하게 답변해주세요. 질문과 직접 관련 없는 정보는 포함하지 마세요. 문서에 없는 내용은 지어내지 말고, 정보가 부족하면 모른다고 답하세요. 답변은 2~3문장 이내로 핵심만 말하세요.\n\n[참고 문서]\n{context}\n\n[질문]\n{query}\n\nAssistant:"
 
         body = json.dumps({
             "prompt": prompt,
@@ -1393,9 +1393,8 @@ def chat_ask(req: ChatRequest, db: Session = Depends(get_db)):
         if generated_answer:
             reply_text = generated_answer
         else:
-            # 생성 실패 시 원문 일부 반환
-            doc = rag_docs[0]
-            reply_text = f"[AI 검색 결과] 관련 내용을 찾았습니다:\n\n{doc.content[:300]}...\n\n(상세 내용은 학사 매뉴얼을 확인해주세요.)"
+            # 생성 실패 시 안내 메시지만 반환 (원문 덤프 금지)
+            reply_text = "관련 내용을 학사 매뉴얼에서 찾았으나 AI 답변 생성에 실패했습니다. 학사지원팀에 직접 문의하시거나 학사 매뉴얼을 확인해주세요."
 
     # 3. 검색 결과가 없을 때만 기존 하드코딩 규칙 적용 (Fallback)
     elif "수강신청" in user_msg or "장바구니" in user_msg:
