@@ -435,7 +435,20 @@ async function loadEnrollments() {
             const data = await response.json();
             cartData = data.schedules;
 
-            // courseList에 없는 수강 강의(다른 페이지)의 times 정보 캐싱
+            // enrollment 응답에 schedules가 포함된 경우 바로 캐싱
+            cartData.forEach(item => {
+                if (item.lecture_id && item.schedules && item.schedules.length > 0
+                    && !enrolledLectureCache[item.lecture_id]
+                    && !courseList.find(c => c.id === item.lecture_id)) {
+                    enrolledLectureCache[item.lecture_id] = {
+                        ...item,
+                        id: item.lecture_id,
+                        times: schedulesToTimes(item.schedules),
+                    };
+                }
+            });
+
+            // schedules가 없는 강의(구버전 캐시 미스)는 개별 API로 보완
             const uncachedIds = cartData
                 .map(c => c.lecture_id)
                 .filter(lid => lid && !enrolledLectureCache[lid] && !courseList.find(c => c.id === lid));
