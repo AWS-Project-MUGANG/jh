@@ -27,6 +27,9 @@ const MAX_ENROLL_CREDITS = 25;
 // 로그인한 학생 프로필 (일차별 제한 필터에 사용)
 let userProfile = null;
 
+// 수강 중인 강의의 상세 정보 캐시 (times 포함, 페이지 이동 시에도 시간표 유지)
+let enrolledLectureCache = {};
+
 // 모달 디자인이 있을 경우 기본 alert()를 가로채어 예쁜 모달로 띄웁니다.
 const originalAlert = window.alert;
 window.alert = function(msg) {
@@ -313,45 +316,6 @@ window.dropEnrollment = async function(id) {
     } catch (e) { console.error(e); }
 };
 
-// AI 자동 추천 로직
-window.requestAIRecommend = async function() {
-    const pref = document.getElementById('aiPrefInput').value;
-    const loading = document.getElementById('aiLoadingIndicator');
-    
-    if(!userId) return alert('로그인이 필요합니다.');
-    
-    loading.style.display = 'block';
-
-    try {
-        const res = await fetch('/api/v1/student/ai/recommend', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                user_id: parseInt(userId),
-                preference: pref
-            })
-        });
-
-        const data = await res.json();
-        
-        if (res.ok) {
-            alert(data.message);
-            document.getElementById('aiRecommendModal').style.display = 'none';
-            document.getElementById('aiPrefInput').value = '';
-            
-            // 데이터 갱신
-            await loadEnrollments();
-        } else {
-            alert(`AI 추천 실패: ${data.detail}`);
-        }
-    } catch (error) {
-        console.error("AI req err:", error);
-        alert("AI 분석 시스템 응답이 지연되고 있습니다.");
-    } finally {
-        loading.style.display = 'none';
-    }
-};
-
 // 수강신청(DB 저장) 로직 연동
 window.addToCart = async function(id) {
     if(!isEnrollmentActive) return alert("현재는 수강신청 기간이 아닙니다.");
@@ -433,14 +397,16 @@ function renderTimetable() {
     const colors = ['#e3f2fd', '#e8f5e9', '#fff3e0', '#fce4ec', '#f3e5f5'];
     
     cartData.forEach((cartItem, index) => {
-        // 기존은 subject 매칭이었으나 API 구조에 맞춰 매칭 로직 간소화
-        const mockItem = courseList.find(c => c.subject === cartItem.subject);
-        if(mockItem && mockItem.times) {
+        // courseList(현재 페이지) 또는 enrolledLectureCache(전체 수강 강의 캐시)에서 times 조회
+        const cached = enrolledLectureCache[cartItem.lecture_id];
+        const fromList = courseList.find(c => c.id === cartItem.lecture_id);
+        const lectureDetail = cached || fromList;
+        if (lectureDetail && lectureDetail.times) {
             const color = colors[index % colors.length];
-            mockItem.times.forEach(t => {
+            lectureDetail.times.forEach(t => {
                 if(rows[t.time] && rows[t.time].cells[t.day]) {
                     const cell = rows[t.time].cells[t.day];
-                    cell.innerHTML = `<span style="font-weight:bold; font-size:0.9rem;">${cartItem.subject}</span><br><span style="font-size:0.75rem; color:#666;">${cartItem.room}</span>`;
+                    cell.innerHTML = `<span style="font-weight:bold; font-size:0.9rem;">${cartItem.subject}</span><br><span style="font-size:0.75rem; color:#666;">${cartItem.classroom || '-'}</span>`;
                     cell.style.backgroundColor = color;
                     cell.style.borderRadius = "4px";
                     cell.style.border = `1px solid ${color}`;
@@ -458,6 +424,23 @@ async function loadEnrollments() {
         if (response.ok) {
             const data = await response.json();
             cartData = data.schedules;
+
+            // courseList에 없는 수강 강의(다른 페이지)의 times 정보 캐싱
+            const uncachedIds = cartData
+                .map(c => c.lecture_id)
+                .filter(lid => lid && !enrolledLectureCache[lid] && !courseList.find(c => c.id === lid));
+            if (uncachedIds.length > 0) {
+                await Promise.all(uncachedIds.map(async (lid) => {
+                    try {
+                        const r = await fetch(`/api/v1/lectures/${lid}`);
+                        if (r.ok) {
+                            const d = await r.json();
+                            enrolledLectureCache[lid] = d;
+                        }
+                    } catch (_) {}
+                }));
+            }
+
             renderCart();
             renderTimetable();
             renderSugangList(); // 신청완료 버튼 상태 동기화
@@ -656,21 +639,15 @@ async function loadUserProfile() {
             const idEl = document.querySelector('.student-info .id');
             const collegeEl = document.querySelector('.department-info p:first-child');
             const subDeptEl = document.querySelector('.department-info .sub-dept');
-            const yearEl = document.querySelector('.department-info .year');
-            
+
             console.log('[profile] data:', data);
             if (nameEl) nameEl.innerText = data.name || '-';
             if (idEl) idEl.innerText = data.student_id || data.loginid || '-';
-            
+
             const isStaff = data.role === 'STAFF';
-            
+
             if (collegeEl) {
                 collegeEl.innerText = isStaff ? '교직원' : (data.college || '소속 대학 없음');
-                if (isStaff) {
-                    collegeEl.innerText = '교직원';
-                } else {
-                    collegeEl.innerText = data.college || '소속 대학 없음';
-                }
             }
             
             if (subDeptEl) {
@@ -989,7 +966,7 @@ window.generateCertificatePDF = async function() {
     const nameStr = document.querySelector('.student-info .name')?.innerText || '홍길동';
     const idStr = document.querySelector('.student-info .id')?.innerText || '20201234';
     const deptStr = document.querySelector('.department-info p')?.innerText || '사회과학대학';
-    const subDeptStr = document.querySelector('.department-info .sub-dept')?.innerText.replace('2학년', '').trim() || '아동가족복지학과';
+    const subDeptStr = document.querySelector('.department-info .sub-dept')?.innerText.replace(/\d+학년/, '').trim() || '아동가족복지학과';
     
     document.getElementById('cert-name').innerText = nameStr;
     document.getElementById('cert-id').innerText = idStr;
