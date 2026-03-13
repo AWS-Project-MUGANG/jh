@@ -18,6 +18,14 @@ resource "aws_security_group" "proxy_sg" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 
+  ingress {
+    from_port   = 22
+    to_port     = 22
+    protocol    = "tcp"
+    cidr_blocks = ["221.164.153.246/32"]
+    description = "SSH tunnel for DB access"
+  }
+
   egress {
     from_port   = 0
     to_port     = 0
@@ -68,6 +76,14 @@ resource "aws_security_group" "rds_sg" {
     protocol        = "tcp"
     security_groups = [aws_security_group.app_sg.id]
     description     = "PostgreSQL from App Server"
+  }
+
+  ingress {
+    from_port       = 5432
+    to_port         = 5432
+    protocol        = "tcp"
+    security_groups = [aws_security_group.proxy_sg.id]
+    description     = "PostgreSQL from Proxy EC2 (SSH tunnel)"
   }
 
   egress {
