@@ -188,6 +188,7 @@ terraform output
 ---
 
 ## 8-4) 현재 AWS 리소스 스냅샷 (2026-03-14)
+![alt text](images/image.png)
 
 | 리소스 | 현재 상태 | 식별자/값 |
 | --- | --- | --- |
@@ -206,6 +207,7 @@ terraform output
 
 ## 9) CI/CD (GitHub Actions)
 
+![alt text](images/image-1.png)
 현재 워크플로는 다음 흐름으로 구성됩니다.
 
 - `.github/workflows/deploy.yml`
@@ -241,54 +243,44 @@ terraform output
 
 ---
 
-## 10-1) 발표용 데모 시나리오 (권장)
+## 10) 데이터베이스 구성
 
-1. 로그인: 학생 계정(`201811047`)으로 로그인 후 대시보드 진입
-2. 수강신청: 강의 필터 조회 후 장바구니 담기 및 신청
-3. 챗봇 질의: `/api/v1/chat/ask` 기반으로 학사 질문 응답 확인
-4. 관리자 기능: 과목/PDF 업로드 또는 수강신청 일정 설정 시연
-5. 시스템 확인: `/api/v1/admin/system-status` 또는 `/api/health`로 마무리
-
----
-
-## 11) 데이터베이스 구성
-
-### 11-1. PostgreSQL (RDS / 로컬 컨테이너)
+### 10-1. PostgreSQL (RDS / 로컬 컨테이너)
 
 - 학사 핵심 데이터 저장
 - SQLAlchemy ORM + pgvector 사용
 - 로컬 Docker에서는 `pgvector/pgvector:pg16` 이미지 사용
 
-### 11-2. DynamoDB (현재 미사용)
+### 10-2. DynamoDB (현재 미사용)
 
 - Terraform에서 `mugang-chat-history` 테이블 정의 (`hash_key=session_id`, `range_key=timestamp`)
 - 인프라 수준에만 존재하며, 애플리케이션 코드에서 실제로 연결하여 사용하지 않음
 - 향후 챗봇 이력 저장 용도로 연결 예정
 
-### 11-3. SQLite (Fallback)
+### 10-3. SQLite (Fallback)
 
 - `DATABASE_URL` 미설정 시 개발 fallback으로 동작 가능
 - 운영/검증 환경에서는 PostgreSQL 사용 권장
 
 ---
 
-## 12) 아키텍처 다이어그램
+## 11) 아키텍처 다이어그램
 
-### 12-0. 실제 사용 AWS 리소스
+### 11-0. 실제 사용 AWS 리소스
 
 한눈에 보이도록 `리소스군 / 실제 서비스 / 역할` 기준으로 정리했습니다.
 
 | 리소스군 | 실제 서비스 | 역할 |
 | --- | --- | --- |
-| 네트워크 | VPC, Public/Private Subnet, IGW, NAT, Route Table, Security Group | 외부/내부 트래픽 분리, 라우팅, 포트 제어 |
+| 네트워크 | VPC, Public/Private Subnet, IGW, NAT Gateway(EIP 연결), Route Table, Security Group | 외부/내부 트래픽 분리, 라우팅, 포트 제어 / EIP는  NAT Gateway에 할당하여 Private 서브넷 → 인터넷 아웃바운드(ECR·Bedrock 통신) 에 사용 |
 | 컴퓨팅 | EC2 Proxy, Launch Template(Blue/Green), ASG(Blue/Green) | 프록시 라우팅, 무중단 배포, 앱 실행 |
 | 데이터 | RDS PostgreSQL, DynamoDB(`mugang-chat-history`, 현재 미사용) | 핵심 트랜잭션 저장 / DynamoDB는 Terraform 인프라 정의만 존재하며 추후 챗봇 이력 저장 용도로 연결 개발 예정 |
 | 이미지/상태 | ECR(frontend/backend), S3(Terraform backend state) | 컨테이너 이미지 저장, 인프라 상태 관리 |
 | 접근/운영 | IAM Role/Profile/Policy, SSM(Session/RunCommand) | 권한 제어, 원격 점검/명령 수행 |
 | CI/CD/AI | GitHub Actions, Bedrock Runtime | 자동 배포 파이프라인, LLM/임베딩 호출 |
 
-### 12-1. AWS 인프라 아키텍처 (요약)
-
+### 11-1. AWS 인프라 아키텍처 (요약)
+![alt text](images/image-3.png)
 ```mermaid
 flowchart LR
     USER[User Browser] --> PROXY[EC2 Proxy Nginx]
@@ -309,7 +301,8 @@ flowchart LR
     SSM --> GREEN
 ```
 
-### 12-2. AWS 인프라 아키텍처 (상세)
+### 11-2. AWS 인프라 아키텍처 (상세)
+
 
 ```mermaid
 graph TB
@@ -442,8 +435,8 @@ graph TB
     class Nginx_FE nginx
 ```
 
-### 12-3. 서비스 아키텍처 (논리 구성)
-
+### 11-3. 서비스 아키텍처 (논리 구성)
+![alt text](images/image-4.png)
 ```mermaid
 flowchart LR
     U[User] --> WEB[Web UI\nNginx + HTML/CSS/JS]
@@ -469,8 +462,8 @@ flowchart LR
     API -. 미사용 개발예정 .-> DDB[(DynamoDB)]
 ```
 
-### 12-4. 챗봇 질의 흐름
-
+### 11-4. 챗봇 질의 흐름
+![alt text](images/image-5.png)
 ```mermaid
 sequenceDiagram
     participant U as User
@@ -491,7 +484,7 @@ sequenceDiagram
 
 ---
 
-## 13) 주요 경로
+## 12) 주요 경로
 
 - Backend API: `backend/main.py`
 - Backend Model: `backend/models.py`
@@ -507,7 +500,7 @@ sequenceDiagram
 
 ---
 
-## 14) 운영 체크 포인트
+## 13) 운영 체크 포인트
 
 - 배포 후 `http://43.201.54.86/api/health` 응답 확인
 - 배포 후 `http://43.201.54.86/docs` Swagger 확인
@@ -516,7 +509,7 @@ sequenceDiagram
 
 ---
 
-## 15) 향후 개선 후보
+## 14) 향후 개선 후보
 
 - DynamoDB 챗봇 이력 저장 경로를 백엔드 코드에 연결(현재 인프라 정의만 존재, 미사용)
 - Alembic 기반 마이그레이션 도입
@@ -525,7 +518,7 @@ sequenceDiagram
 
 ---
 
-## 16) 제출용 화면 캡처 (앱)
+## 15) 제출용 화면 캡처 (앱)
 
 아래 이미지는 `images/` 폴더에 저장한 수동 캡처본입니다.
 
@@ -552,7 +545,7 @@ sequenceDiagram
 
 ---
 
-## 17) 제출용 화면 캡처 (AWS)
+## 16) 제출용 화면 캡처 (AWS)
 
 경로: `images/`
 
@@ -570,7 +563,7 @@ sequenceDiagram
 
 ---
 
-## 18) 제출용 화면 캡처 (CI/CD)
+## 17) 제출용 화면 캡처 (CI/CD)
 
 경로: `images/`
 
