@@ -189,6 +189,9 @@ terraform output
 
 ## 8-4) 현재 AWS 리소스 스냅샷 (2026-03-14)
 ![alt text](images/image.png)
+![alt text](images/db.png)
+![alt text](images/be.png)
+![alt text](images/fe.png)
 
 | 리소스 | 현재 상태 | 식별자/값 |
 | --- | --- | --- |
@@ -207,7 +210,7 @@ terraform output
 
 ## 9) CI/CD (GitHub Actions)
 
-![alt text](images/image-1.png)
+![alt text](images/image-0.png)<br>
 현재 워크플로는 다음 흐름으로 구성됩니다.
 
 - `.github/workflows/deploy.yml`
@@ -302,8 +305,7 @@ flowchart LR
 ```
 
 ### 11-2. AWS 인프라 아키텍처 (상세)
-
-
+![alt text](images/image-13.png)
 ```mermaid
 graph TB
     subgraph Internet["🌐 Internet"]
@@ -522,26 +524,26 @@ sequenceDiagram
 
 아래 이미지는 `images/` 폴더에 저장한 수동 캡처본입니다.
 
-1. 로그인 화면 (점검 계정 입력)  
-![app-login](images/app-login.png)
+1. 로그인 화면 (점검 계정 입력)
+![alt text](images/image-6.png)
 
-2. 학생 대시보드(수강신청 + 사이드바 + 챗봇)  
-![app-student-dashboard](images/app-student-dashboard.png)
+2. 학생 대시보드(수강신청 + 사이드바 + 챗봇)
+![alt text](images/image-11.png)
 
-3. 학생 시간표 화면  
-![app-student-timetable](images/app-student-timetable.png)
+3. 학생 시간표 화면
+![alt text](images/image-7.png)
 
-4. 관리자 과목 개설 관리 화면  
-![app-admin-course-management](images/app-admin-course-management.png)
+4. 관리자 과목 개설 관리 화면
+![alt text](images/image-8.png)
 
-5. 관리자 수강신청 일정 관리 화면  
-![app-admin-enrollment-schedule](images/app-admin-enrollment-schedule.png)
+5. 관리자 수강신청 일정 관리 화면
+![alt text](images/image-9.png)
 
-6. 관리자 AI 학사 규정(RAG) 업데이트 화면  
-![app-admin-rag-update](images/app-admin-rag-update.png)
+6. 관리자 AI 학사 규정(RAG) 업데이트 화면
+![alt text](images/image-10.png)
 
-7. 관리자 서버 모니터링 화면  
-![app-admin-server-management](images/app-admin-server-management.png)
+7. 관리자 서버 모니터링 화면
+![alt text](images/image-12.png)
 
 ---
 
