@@ -233,7 +233,6 @@ terraform output
 | CI/CD/AI | GitHub Actions, Bedrock Runtime | 자동 배포 파이프라인, LLM/임베딩 호출 |
 
 ### 11-1. AWS 인프라 아키텍처 (요약)
-![alt text](images/image-3.png)
 ```mermaid
 flowchart LR
     USER[User Browser] --> PROXY[EC2 Proxy Nginx]
@@ -255,7 +254,6 @@ flowchart LR
 ```
 
 ### 11-2. AWS 인프라 아키텍처 (상세)
-![alt text](images/image-13.png)
 ```mermaid
 graph TB
     subgraph Internet["🌐 Internet"]
@@ -388,7 +386,6 @@ graph TB
 ```
 
 ### 11-3. 서비스 아키텍처 (논리 구성)
-![alt text](images/image-4.png)
 ```mermaid
 flowchart LR
     U[User] --> WEB[Web UI\nNginx + HTML/CSS/JS]
@@ -415,7 +412,6 @@ flowchart LR
 ```
 
 ### 11-4. 챗봇 질의 흐름
-![alt text](images/image-5.png)
 ```mermaid
 sequenceDiagram
     participant U as User
