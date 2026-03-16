@@ -217,27 +217,6 @@ terraform output
 
 ---
 
-## 10) 데이터베이스 구성
-
-### 10-1. PostgreSQL (RDS / 로컬 컨테이너)
-
-- 학사 핵심 데이터 저장
-- SQLAlchemy ORM + pgvector 사용
-- 로컬 Docker에서는 `pgvector/pgvector:pg16` 이미지 사용
-
-### 10-2. DynamoDB (현재 미사용)
-
-- Terraform에서 `mugang-chat-history` 테이블 정의 (`hash_key=session_id`, `range_key=timestamp`)
-- 인프라 수준에만 존재하며, 애플리케이션 코드에서 실제로 연결하여 사용하지 않음
-- 향후 챗봇 이력 저장 용도로 연결 예정
-
-### 10-3. SQLite (Fallback)
-
-- `DATABASE_URL` 미설정 시 개발 fallback으로 동작 가능
-- 운영/검증 환경에서는 PostgreSQL 사용 권장
-
----
-
 ## 11) 아키텍처 다이어그램
 
 ### 11-0. 실제 사용 AWS 리소스
@@ -515,37 +494,3 @@ sequenceDiagram
 
 7. 관리자 서버 모니터링 화면
 ![alt text](images/image-12.png)
-
----
-
-## 16) 제출용 화면 캡처 (AWS)
-
-경로: `images/`
-
-1. EC2 인스턴스 목록  
-![aws-ec2-instances](images/aws-ec2-instances.png)
-
-2. RDS 인스턴스 상세  
-![aws-rds-detail](images/aws-rds-detail.png)
-
-3. ECR 리포지토리 목록  
-![aws-ecr-repositories](images/aws-ecr-repositories.png)
-
-4. ECR backend 이미지 태그 상세  
-![aws-ecr-backend-images](images/aws-ecr-backend-images.png)
-
----
-
-## 17) 제출용 화면 캡처 (CI/CD)
-
-경로: `images/`
-
-1. GitHub Actions 배포 성공 및 단계 로그  
-![cicd-github-actions-success](images/cicd-github-actions-success.png)
-
-
-
-
-
-
-
