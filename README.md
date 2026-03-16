@@ -5,35 +5,6 @@ FastAPI + Vanilla JS 기반의 AI 학사행정 웹 애플리케이션입니다.
 
 ---
 
-## Quick Start
-
-```bash
-docker compose up -d --build
-```
-
-- Frontend: `http://localhost:8888`
-- Backend Docs: `http://localhost:8000/docs`
-- Health: `http://localhost:8000/api/health`
-
----
-
-## 0) 실제 AWS 운영 정보 (2026-03-14 확인)
-
-아래 값은 로컬 AWS CLI/Terraform output 기준 실조회 값입니다.  
-민감정보(비밀번호, 액세스 키 원문)는 문서에 포함하지 않았습니다.
-
-- AWS Account ID: `410947917751`
-- IAM User(배포/운영): `arn:aws:iam::410947917751:user/mugang`
-- Region: `ap-northeast-2` (Seoul)
-- Terraform Active Color: `blue`
-- Terraform Inactive Color: `green`
-- Public Entry: `http://43.201.54.86/`
-- API Docs: `http://43.201.54.86/docs`
-- API Health: `http://43.201.54.86/api/health`
-- 참고: Public IP는 변경될 수 있으며, 최신 값은 `terraform output proxy_public_ip`로 확인
-
----
-
 ## 1) 주요 기능
 
 - 학번/사번 로그인 + 초기 비밀번호 변경(First Setup)
